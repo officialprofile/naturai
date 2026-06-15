@@ -10,8 +10,19 @@
   const TAU = Math.PI * 2;
   const TILE = 64;
   const BOSS_X = 9024;
-  const BOSS_Y = 2368;
+  const BOSS_Y = 2528;
   const DATA_CENTER = { x: 8000, y: 1152, w: 1472, h: 1984, wall: TILE };
+  // Boss sits in its own sealed chamber in the lower-right of the data center.
+  const BOSS_ROOM = { x: 8640, y: 2048, w: 768, h: 960, wall: TILE, doorY: 2336, doorH: 320 };
+  // The data center door is sealed by an electric curtain until every outer server room falls.
+  const DATA_CURTAIN = { x: DATA_CENTER.x, y: DATA_CENTER.y + TILE * 11, w: TILE, h: TILE * 4 };
+  // Glowing core nodes inside the data center hall; destroying all of them makes the boss mortal.
+  const BOSS_CORE_DATA = [
+    { x: 8256, y: 1472 },
+    { x: 8256, y: 2560 },
+    { x: 8768, y: 1472 },
+    { x: 9088, y: 1856 }
+  ];
 
   const WATER_RECTS = [
     { x: 0, y: 3200, w: 9600, h: 320 },
@@ -55,12 +66,21 @@
   ];
 
   const SERVER_SITES = [
-    { x: 1920, y: 2112, tilesW: 6, tilesH: 6, name: "Moss Cache", hp: 14 },
-    { x: 2944, y: 1664, tilesW: 8, tilesH: 6, name: "Hive Gate", hp: 16 },
-    { x: 4480, y: 2112, tilesW: 8, tilesH: 6, name: "Pine Relay", hp: 16 },
-    { x: 5760, y: 832, tilesW: 10, tilesH: 7, name: "Root Rack", hp: 18 },
-    { x: 7040, y: 2112, tilesW: 10, tilesH: 7, name: "Fern Array", hp: 22 },
-    { x: 8192, y: 1536, tilesW: 12, tilesH: 9, name: "Korpo Data Gate", hp: 30 }
+    { x: 1920, y: 2112, tilesW: 6, tilesH: 6, name: "Moss Cache", hp: 14,
+      stone: { label: "OKRUCH KRZEMU", color: "#7ed957",
+        desc: "Pamiec podreczna (cache) na skraju lasu. Trzymala kopie widokow, zeby AI nie musialo co chwila pytac korzeni o droge." } },
+    { x: 2944, y: 1664, tilesW: 8, tilesH: 6, name: "Hive Gate", hp: 16,
+      stone: { label: "BURSZTYN BRAMY", color: "#ffb347",
+        desc: "Rozdzielnik ruchu (load balancer). Rozsylal zgloszenia zwierzat tak, by zaden serwer sie nie znudzil ani nie zaplakal." } },
+    { x: 4480, y: 2112, tilesW: 8, tilesH: 6, name: "Pine Relay", hp: 16,
+      stone: { label: "TURKUS PRZEKAZNIKA", color: "#56d6c8",
+        desc: "Wezel sieci mesh. Przekazywal szept maszyn miedzy drzewami szybciej, niz wiatr niesie zapach zywicy." } },
+    { x: 5760, y: 832, tilesW: 10, tilesH: 7, name: "Root Rack", hp: 18,
+      stone: { label: "GRANAT KORZENIA", color: "#6a7bff",
+        desc: "Serwer nazw i archiwum (DNS). Tu las mial swoj spis tresci, zapisany bez pytania mchu o zgode." } },
+    { x: 7040, y: 2112, tilesW: 10, tilesH: 7, name: "Fern Array", hp: 22,
+      stone: { label: "AMETYST MACIERZY", color: "#b06aff",
+        desc: "Macierz kart graficznych (GPU). Liczyla sny lasu na tysiac sposobow naraz, az zabraklo w nim ciszy." } }
   ];
 
   const SERVER_SITE_RECTS = SERVER_SITES.map((site) => ({
@@ -77,64 +97,124 @@
   ];
   const ALL_WATER_RECTS = WATER_RECTS.concat(SMALL_STREAM_RECTS);
 
+  // Each burrow drops into its own, mostly isolated cave cluster (see UNDER_TUNNELS).
   const BURROWS = [
-    { x: 640, y: 960, ux: 448, uy: 448, label: "Stara nora" },
-    { x: 2368, y: 2944, ux: 1536, uy: 704, label: "Nora przy korzeniach" },
-    { x: 5248, y: 1344, ux: 2496, uy: 1536, label: "Nora pod rzeka" },
-    { x: 7616, y: 2496, ux: 3392, uy: 1792, label: "Kamienna nora" }
+    { x: 640, y: 960, ux: 448, uy: 512, label: "Stara nora" },
+    { x: 2368, y: 2944, ux: 1984, uy: 512, label: "Nora przy korzeniach" },
+    { x: 5248, y: 1344, ux: 2112, uy: 1664, label: "Nora pod rzeka" },
+    { x: 7616, y: 2496, ux: 3584, uy: 1536, label: "Kamienna nora" }
   ];
 
+  // item: a cabin holds a readable/wearable; null houses are just ambient homes on the map edges.
+  // big: a roomier, multi-room cabin.
   const CABINS = [
     { x: 704, y: 640, w: 192, h: 192, item: "book", used: false, title: "Dziennik lesnika" },
     { x: 2496, y: 768, w: 192, h: 192, item: "hat", used: false, title: "Stara czapka" },
-    { x: 6336, y: 2496, w: 192, h: 192, item: "boots", used: false, title: "Za duze buty" }
+    { x: 6336, y: 2496, w: 192, h: 192, item: "boots", used: false, title: "Za duze buty" },
+    { x: 4480, y: 320, w: 320, h: 256, item: "flashlight", big: true, used: false, title: "Duza lesna checza" },
+    { x: 256, y: 3456, w: 320, h: 256, item: null, big: true, used: false, title: "Stara checza nad woda" },
+    { x: 1216, y: 352, w: 192, h: 192, item: null, used: false, title: "Domek na skraju" },
+    { x: 6976, y: 352, w: 320, h: 256, item: null, big: true, used: false, title: "Domek pod gorami" },
+    { x: 8896, y: 3488, w: 192, h: 192, item: null, used: false, title: "Domek za data center" },
+    { x: 5440, y: 3584, w: 320, h: 256, item: null, big: true, used: false, title: "Checza na pograniczu" }
   ];
 
+  // Hidden treasure pockets: 3 sides are dense forest wall, only ONE side is a chewable hedge.
   const SECRET_HEDGE_RECTS = [
-    { x: 512, y: 1920, w: 512, h: 128, name: "Sekretny zarosl", hp: 5 },
-    { x: 512, y: 2304, w: 512, h: 128, name: "Sekretny zarosl", hp: 5 },
-    { x: 512, y: 1920, w: 128, h: 512, name: "Sekretny zarosl", hp: 5 },
-    { x: 896, y: 1920, w: 128, h: 512, name: "Sekretny zarosl", hp: 5 }
+    // Pocket A (west) -> elixir, entry by chewing the east hedge
+    { x: 832, y: 1984, w: 64, h: 384, name: "Sekretny zarosl", hp: 5 },
+    // Pocket B (north) -> super long stick, entry from the south hedge
+    { x: 2048, y: 576, w: 384, h: 64, name: "Sekretny zarosl", hp: 5 },
+    // Pocket C (south) -> heart of the forest, entry from the north hedge
+    { x: 2944, y: 3456, w: 384, h: 64, name: "Sekretny zarosl", hp: 5 }
+  ];
+
+  // The 3 closed sides of each secret pocket read as ordinary impassable forest.
+  const SECRET_WALL_RECTS = [
+    { x: 512, y: 1984, w: 64, h: 384 }, { x: 512, y: 1984, w: 384, h: 64 }, { x: 512, y: 2304, w: 384, h: 64 },
+    { x: 2048, y: 256, w: 64, h: 384 }, { x: 2368, y: 256, w: 64, h: 384 },
+    { x: 2944, y: 3456, w: 64, h: 384 }, { x: 3264, y: 3456, w: 64, h: 384 }, { x: 2944, y: 3776, w: 384, h: 64 }
   ];
 
   const UNDER_W = 4096;
   const UNDER_H = 2816;
+  // Four cave clusters. A and B share ONE corridor (neighbouring servers); C and D are fully
+  // isolated, so the underground no longer lets you cross the whole map.
   const UNDER_TUNNELS = [
-    { x: 256, y: 384, w: 1408, h: 128 },
-    { x: 896, y: 384, w: 128, h: 960 },
-    { x: 896, y: 1216, w: 1152, h: 128 },
-    { x: 1472, y: 640, w: 128, h: 960 },
-    { x: 1472, y: 640, w: 1152, h: 128 },
-    { x: 2432, y: 640, w: 128, h: 1152 },
-    { x: 1984, y: 1472, w: 1472, h: 128 },
-    { x: 3328, y: 1472, w: 128, h: 512 },
-    { x: 640, y: 1856, w: 2816, h: 128 },
-    { x: 640, y: 1216, w: 128, h: 768 },
-    { x: 2688, y: 1984, w: 128, h: 448 }
+    // --- Cluster A (Stara nora) -> servers #1 & #2 ---
+    { x: 256, y: 448, w: 1024, h: 128 },
+    { x: 384, y: 448, w: 128, h: 640 },
+    { x: 1152, y: 448, w: 128, h: 512 },
+    { x: 384, y: 960, w: 896, h: 128 },
+    { x: 640, y: 832, w: 384, h: 256 },
+    // --- single A<->B link ---
+    { x: 1216, y: 448, w: 384, h: 128 },
+    // --- Cluster B (Nora przy korzeniach) -> servers #3 & #4 ---
+    { x: 1536, y: 448, w: 1024, h: 128 },
+    { x: 1664, y: 448, w: 128, h: 704 },
+    { x: 2432, y: 448, w: 128, h: 512 },
+    { x: 1664, y: 1024, w: 896, h: 128 },
+    { x: 1856, y: 896, w: 384, h: 256 },
+    // --- Cluster C (Nora pod rzeka) -> server #5 & data-center feed ---
+    { x: 1792, y: 1792, w: 1216, h: 128 },
+    { x: 1920, y: 1600, w: 128, h: 704 },
+    { x: 2816, y: 1664, w: 128, h: 640 },
+    { x: 1920, y: 1600, w: 896, h: 128 },
+    { x: 2176, y: 2048, w: 512, h: 256 },
+    // --- Cluster D (Kamienna nora) -> underground oasis ---
+    { x: 3392, y: 1472, w: 384, h: 128 },
+    { x: 3520, y: 1472, w: 128, h: 384 },
+    { x: 3200, y: 1792, w: 704, h: 640 }
   ];
+  // The large peaceful chamber in cluster D.
+  const UNDER_OASIS = { x: 3200, y: 1792, w: 704, h: 640 };
 
   const MOLE_DATA = [
-    { name: "Kret Archiwista", x: 960, y: 1216, lines: ["Pod ziemia przewody gadaja szybciej niz korzenie.", "Przegryz kabel przy serwerowni, a kamery na gorze zasna."] },
-    { name: "Kret Elektryk", x: 2480, y: 704, lines: ["Nie musisz gasic pradu, ale bez kamer latwiej dojsc do rdzenia.", "Kable sa czerwone i cieple. Gryz ostroznie, ale stanowczo."] },
-    { name: "Kret Kartograf", x: 3360, y: 1792, lines: ["Tunele sa waskie. Patrz pod lapy, bo mrok lubi mylic kierunki."] }
+    { name: "Kret Archiwista", x: 832, y: 1008, lines: ["Pod ziemia przewody gadaja szybciej niz korzenie.", "Przegryz kabel przy serwerowni numer 1, a jej kamery na gorze zasna."] },
+    { name: "Kret Elektryk", x: 2016, y: 1080, lines: ["Bez kamer latwiej dojsc do rdzenia, ale pradu gasic nie musisz.", "Kable spadaja z sufitu i sa cieple. Gryz ostroznie, lecz stanowczo."] },
+    { name: "Kret Kartograf", x: 2400, y: 1856, lines: ["Te jaskinie sa juz porozdzielane. Z tego korytarza dojdziesz do serwerowni numer 5 i do zasilania data center.", "Po oazie poznasz, ze jestes daleko od maszyn."] }
   ];
 
   const CATERPILLAR_DATA = [
-    { x: 512, y: 448 }, { x: 1184, y: 1280 }, { x: 1760, y: 704 },
-    { x: 2368, y: 1536 }, { x: 3200, y: 1920 }, { x: 768, y: 1920 }
+    { x: 576, y: 488 }, { x: 960, y: 1000 }, { x: 1904, y: 500 },
+    { x: 2208, y: 1080 }, { x: 2304, y: 1856 }, { x: 3520, y: 2160 }
   ];
 
+  // Cables now drop from the cave ceiling (top end buried in rock) instead of ending in mid-air.
+  // dataFeed cables power the data-center cameras instead of an outer server.
   const CABLE_DATA = [
-    { serverIndex: 0, x: 1088, y: 1216, w: 512, h: 32 },
-    { serverIndex: 1, x: 1472, y: 736, w: 32, h: 640 },
-    { serverIndex: 2, x: 1984, y: 640, w: 576, h: 32 },
-    { serverIndex: 3, x: 2432, y: 1184, w: 32, h: 512 },
-    { serverIndex: 4, x: 2688, y: 1472, w: 640, h: 32 },
-    { serverIndex: 5, x: 3328, y: 1472, w: 32, h: 384 }
+    { serverIndex: 0, x: 560, y: 372, w: 26, h: 170 },
+    { serverIndex: 1, x: 1024, y: 372, w: 26, h: 170 },
+    { serverIndex: 2, x: 1760, y: 372, w: 26, h: 170 },
+    { serverIndex: 3, x: 2360, y: 372, w: 26, h: 170 },
+    { serverIndex: 4, x: 2240, y: 1524, w: 26, h: 170 },
+    { serverIndex: null, dataFeed: true, x: 2700, y: 1524, w: 26, h: 170 }
   ];
 
-  const TERRAIN_SOLIDS = FOREST_WALL_RECTS;
-  const PLACEMENT_BLOCKERS = ALL_WATER_RECTS.concat(FOREST_WALL_RECTS, SERVER_SITE_RECTS, CABINS, SECRET_HEDGE_RECTS, [DATA_CENTER]);
+  // Buried tech curios found deep underground; collectible into the inventory.
+  const INTEL_DATA = [
+    { x: 3600, y: 2096, label: "PROCESOR INTEL",
+      desc: "Zardzewialy procesor w obudowie. Krety mowia, ze to z niego AI nauczylo sie liczyc szybciej niz bobr scina drzewo." },
+    { x: 2480, y: 2160, label: "KOSC PAMIECI",
+      desc: "Modul RAM oblepiony mchem. Pamietal jeszcze, jak las wygladal, zanim policzono kazde drzewo." }
+  ];
+
+  // Inventory descriptions for picked-up gear (gems and intel are described where they spawn).
+  const ITEM_LIBRARY = {
+    book: { label: "DZIENNIK LESNIKA", color: "#d4a15b",
+      desc: "Wilgotny dziennik z chatki. Ostatni wpis radzi: zaczynaj od zrodla brzeczenia, nie od najwiekszej sciany." },
+    hat: { label: "STARA CZAPKA", color: "#34463d",
+      desc: "Za duza i pachnie kurzem, ale dodaje bobrowi powagi. Czysto ozdobna." },
+    boots: { label: "ZA DUZE BUTY", color: "#7c8a8d",
+      desc: "Ludzkie buty, zupelnie niepraktyczne dla bobra. Nosisz je z dumna niezrecznoscia." },
+    stick: { label: "SUPER DLUGI PATYK", color: "#b77b43",
+      desc: "Niemozliwie dlugi kij. Wydluza zasieg gryzienia, wiec dosiegasz rdzeni z bezpiecznej odleglosci." },
+    flashlight: { label: "LATARKA NA OGON", color: "#ffe07a",
+      desc: "Latarka zapinana na ogon. Pod ziemia widzisz znacznie dalej niz przy samym blasku korzeni." }
+  };
+
+  const TERRAIN_SOLIDS = FOREST_WALL_RECTS.concat(SECRET_WALL_RECTS);
+  const PLACEMENT_BLOCKERS = ALL_WATER_RECTS.concat(FOREST_WALL_RECTS, SECRET_WALL_RECTS, SERVER_SITE_RECTS, CABINS, SECRET_HEDGE_RECTS, [DATA_CENTER]);
 
   const keys = new Set();
   const particles = [];
@@ -144,6 +224,7 @@
   const friendlyCritters = [];
   const followers = [];
   const dolphins = [];
+  const invButtons = [];
 
   let audio = null;
   let audioMuted = false;
@@ -319,14 +400,66 @@
     const b = roomBounds(server);
     const wall = server.wall;
     const door = server.door;
-    const leftDoor = server.x - door / 2;
-    const rightDoor = server.x + door / 2;
+    const side = server.doorSide || "bottom";
+    const walls = [];
+    // top / bottom walls (split if the door opens through them)
+    if (side === "top") {
+      const d0 = server.x - door / 2;
+      walls.push({ x: b.x, y: b.y, w: d0 - b.x, h: wall });
+      walls.push({ x: server.x + door / 2, y: b.y, w: b.x + b.w - (server.x + door / 2), h: wall });
+    } else {
+      walls.push({ x: b.x, y: b.y, w: b.w, h: wall });
+    }
+    if (side === "bottom") {
+      const d0 = server.x - door / 2;
+      walls.push({ x: b.x, y: b.y + b.h - wall, w: d0 - b.x, h: wall });
+      walls.push({ x: server.x + door / 2, y: b.y + b.h - wall, w: b.x + b.w - (server.x + door / 2), h: wall });
+    } else {
+      walls.push({ x: b.x, y: b.y + b.h - wall, w: b.w, h: wall });
+    }
+    // left / right walls
+    if (side === "left") {
+      const d0 = server.y - door / 2;
+      walls.push({ x: b.x, y: b.y, w: wall, h: d0 - b.y });
+      walls.push({ x: b.x, y: server.y + door / 2, w: wall, h: b.y + b.h - (server.y + door / 2) });
+    } else {
+      walls.push({ x: b.x, y: b.y, w: wall, h: b.h });
+    }
+    if (side === "right") {
+      const d0 = server.y - door / 2;
+      walls.push({ x: b.x + b.w - wall, y: b.y, w: wall, h: d0 - b.y });
+      walls.push({ x: b.x + b.w - wall, y: server.y + door / 2, w: wall, h: b.y + b.h - (server.y + door / 2) });
+    } else {
+      walls.push({ x: b.x + b.w - wall, y: b.y, w: wall, h: b.h });
+    }
+    // a short interior partition gives the bigger rooms a less boxy footprint
+    if (server.partition) {
+      walls.push({ x: b.x + TILE * 2, y: b.y + wall, w: wall, h: Math.floor(server.tilesH * 0.45) * TILE });
+    }
+    return walls;
+  }
+
+  function doorRect(server) {
+    const b = roomBounds(server);
+    const wall = server.wall;
+    const door = server.door;
+    const side = server.doorSide || "bottom";
+    if (side === "top") return { x: server.x - door / 2, y: b.y, w: door, h: wall };
+    if (side === "left") return { x: b.x, y: server.y - door / 2, w: wall, h: door };
+    if (side === "right") return { x: b.x + b.w - wall, y: server.y - door / 2, w: wall, h: door };
+    return { x: server.x - door / 2, y: b.y + b.h - wall, w: door, h: wall };
+  }
+
+  function bossRoomWalls() {
+    if (!game || game.worldRestored || game.boss.defeated) return [];
+    const r = BOSS_ROOM;
+    const wall = r.wall;
     return [
-      { x: b.x, y: b.y, w: b.w, h: wall },
-      { x: b.x, y: b.y, w: wall, h: b.h },
-      { x: b.x + b.w - wall, y: b.y, w: wall, h: b.h },
-      { x: b.x, y: b.y + b.h - wall, w: leftDoor - b.x, h: wall },
-      { x: rightDoor, y: b.y + b.h - wall, w: b.x + b.w - rightDoor, h: wall }
+      { x: r.x, y: r.y, w: r.w, h: wall },
+      { x: r.x, y: r.y + r.h - wall, w: r.w, h: wall },
+      { x: r.x + r.w - wall, y: r.y, w: wall, h: r.h },
+      { x: r.x, y: r.y, w: wall, h: r.doorY - r.y },
+      { x: r.x, y: r.doorY + r.doorH, w: wall, h: r.y + r.h - (r.doorY + r.doorH) }
     ];
   }
 
@@ -382,32 +515,35 @@
       makePlank(8128, 1440)
     ];
 
+    // Server rooms are guarded ONLY by robots now. Infected animals roam the open forest.
     const enemies = [
-      makeEnemy("cat", 2048, 2048, 0),
-      makeEnemy("bot", 2176, 2176, 0),
-      makeEnemy("drone", 2304, 2112, 0),
-      makeEnemy("squirrel", 2240, 2432, 0),
-      makeEnemy("dog", 3136, 1856, 1),
-      makeEnemy("bot", 3264, 1728, 1),
+      makeEnemy("bot", 2048, 2080, 0),
+      makeEnemy("drone", 2240, 2112, 0),
+      makeEnemy("bot", 3136, 1856, 1),
       makeEnemy("drone", 3392, 1856, 1),
-      makeEnemy("squirrel", 3520, 1984, 1),
-      makeEnemy("cat", 4608, 2304, 2),
+      makeEnemy("sentinel", 3264, 1728, 1),
+      makeEnemy("bot", 4608, 2304, 2),
       makeEnemy("bot", 4736, 2176, 2),
-      makeEnemy("sentinel", 4928, 2304, 2),
-      makeEnemy("cat", 5952, 960, 3),
-      makeEnemy("bot", 6080, 1152, 3),
+      makeEnemy("drone", 4928, 2304, 2),
+      makeEnemy("bot", 5952, 960, 3),
       makeEnemy("sentinel", 6272, 1024, 3),
-      makeEnemy("squirrel", 6400, 1216, 3),
-      makeEnemy("dog", 7232, 2240, 4),
+      makeEnemy("drone", 6400, 1216, 3),
+      makeEnemy("bot", 7232, 2240, 4),
       makeEnemy("bot", 7360, 2368, 4),
       makeEnemy("drone", 7552, 2240, 4),
-      makeEnemy("dog", 8448, 1856, 5),
-      makeEnemy("bot", 8576, 1728, 5),
-      makeEnemy("drone", 8704, 1856, 5),
-      makeEnemy("sentinel", 8832, 2048, 5),
-      makeEnemy("cat", 3968, 1472, null),
+      makeEnemy("sentinel", 7180, 2300, 4),
+      // data-center guard robots (no server index; they wake when you come close)
+      makeEnemy("sentinel", 8320, 1620, null),
+      makeEnemy("bot", 8520, 2360, null),
+      makeEnemy("drone", 8760, 1520, null),
+      makeEnemy("bot", 9040, 1840, null),
+      makeEnemy("sentinel", 8470, 1480, null),
+      // infected animals wandering the open world
+      makeEnemy("cat", 1408, 1040, null),
+      makeEnemy("dog", 3700, 2860, null),
       makeEnemy("squirrel", 6208, 2496, null),
-      makeEnemy("drone", 7680, 2560, null)
+      makeEnemy("cat", 5040, 3000, null),
+      makeEnemy("dog", 8480, 3420, null)
     ];
     game = {
       state: "menu",
@@ -418,17 +554,22 @@
       defenseAwake: false,
       area: "surface",
       activeBurrow: null,
-      days: 1,
-      dayClock: 0,
       alarmTimer: 0,
       undergroundMessage: 0,
       worldRestored: false,
       victoryTimer: 0,
       victoryAge: 0,
+      inventoryOpen: false,
+      dataFeedCut: false,
+      items: [],
+      gems: [],
       blockers,
       planks,
       servers,
+      bossCores: makeBossCores(),
+      curtain: { x: DATA_CURTAIN.x, y: DATA_CURTAIN.y, w: DATA_CURTAIN.w, h: DATA_CURTAIN.h, down: false, messageShown: false, pulse: 0 },
       enemies,
+      critters: makeCritters(),
       pickups: [
         { type: "flower", species: "daisy", x: 832, y: 896, r: 17, taken: false, bob: 0 },
         { type: "flower", species: "poppy", x: 896, y: 1536, r: 17, taken: false, bob: 0.7 },
@@ -451,12 +592,15 @@
         { type: "nut", x: 4608, y: 1792, r: 12, taken: false, bob: 3.2 },
         { type: "nut", x: 6208, y: 2496, r: 12, taken: false, bob: 4.7 },
         { type: "nut", x: 7616, y: 2624, r: 12, taken: false, bob: 5.4 },
-        { type: "elixir", x: 768, y: 2176, r: 15, taken: false, bob: 6.1 }
+        { type: "elixir", x: 704, y: 2176, r: 15, taken: false, bob: 6.1 },
+        { type: "stick", x: 2240, y: 416, r: 15, taken: false, bob: 0 },
+        { type: "heart", x: 3136, y: 3648, r: 15, taken: false, bob: 0 }
       ],
       npcs: makeBeaverNpcs(),
       moles: makeMoles(),
       caterpillars: makeCaterpillars(),
       cables: makeCables(),
+      intel: INTEL_DATA.map((spot) => ({ ...spot, taken: false })),
       cabins: CABINS.map((cabin) => ({ ...cabin, used: false })),
       hedges: SECRET_HEDGE_RECTS.map((hedge) => ({ ...hedge, maxHp: hedge.hp, destroyed: false, pulse: rand() * TAU })),
       victoryFlowers: makeVictoryFlowers(),
@@ -474,7 +618,7 @@
         facing: 0,
         punchCooldown: 0,
         throwCooldown: 0,
-        nutCooldown: 0,
+        feedCooldown: 0,
         useCooldown: 0,
         hurtCooldown: 0,
         shield: 0,
@@ -483,11 +627,27 @@
         nuts: 0,
         hat: false,
         boots: false,
+        book: false,
+        longStick: false,
+        tailLight: false,
         dash: 0,
         step: 0,
         swimming: false
       }
     };
+
+    // Flowers, nuts and resting planks stay put, centred in a single tile (no bobbing drift).
+    for (const pk of game.pickups) {
+      if (pk.type === "flower" || pk.type === "nut") {
+        pk.x = Math.floor(pk.x / TILE) * TILE + TILE / 2;
+        pk.y = Math.floor(pk.y / TILE) * TILE + TILE / 2;
+      }
+    }
+    for (const pl of game.planks) {
+      pl.x = Math.floor(pl.x / TILE) * TILE + TILE / 2;
+      pl.y = Math.floor(pl.y / TILE) * TILE + TILE / 2;
+      pl.angle = 0;
+    }
 
     particles.length = 0;
     playerShots.length = 0;
@@ -499,32 +659,68 @@
     for (const stream of SMALL_STREAM_RECTS) {
       stream.bridged = false;
       stream.bridgeMessageShown = false;
+      stream.goldenTimer = 5 + rand() * 6;
     }
     for (const item of decor) item.chewed = false;
   }
 
-  function makeServer(site) {
+  // Room shape, door side and number of destroyable computers vary per server; later sites
+  // are bigger and hold more cores, so difficulty climbs the deeper you push.
+  function makeServer(site, index) {
     const w = site.tilesW * TILE;
     const h = site.tilesH * TILE;
     const doorTiles = site.tilesW >= 10 ? 4 : 2;
+    const doorSide = ["bottom", "left", "top", "right", "bottom"][index] || "bottom";
+    const coreCount = [1, 1, 2, 2, 3][index] || 1;
+    const x = site.x + w / 2;
+    const y = site.y + h / 2;
+    const partition = index >= 3;
     return {
-      x: site.x + w / 2,
-      y: site.y + h / 2,
+      x,
+      y,
       w,
       h,
       tilesW: site.tilesW,
       tilesH: site.tilesH,
       wall: TILE,
       door: doorTiles * TILE,
+      doorSide,
+      partition,
       r: TILE * 0.72,
-      hp: site.hp,
-      maxHp: site.hp,
       destroyed: false,
       powered: true,
       alarmCooldown: 0,
+      num: index + 1,
       name: site.name,
+      stone: site.stone,
+      stoneDropped: false,
+      cores: makeServerCores(site, x, y, w, h, coreCount, index),
       pulse: rand() * TAU
     };
+  }
+
+  // Cores are the destroyable computers; a room falls only when all of its cores are down.
+  function makeServerCores(site, cx, cy, w, h, count, index) {
+    const hp = 8 + index;
+    const cores = [];
+    const innerW = w - TILE * 3;
+    if (count === 1) {
+      cores.push({ x: cx, y: cy });
+    } else if (count === 2) {
+      cores.push({ x: cx - innerW * 0.26, y: cy }, { x: cx + innerW * 0.26, y: cy });
+    } else {
+      cores.push({ x: cx - innerW * 0.3, y: cy - TILE }, { x: cx + innerW * 0.3, y: cy - TILE }, { x: cx, y: cy + TILE });
+    }
+    return cores.map((c) => ({
+      x: Math.round(c.x), y: Math.round(c.y), r: TILE * 0.7,
+      hp, maxHp: hp, destroyed: false, pulse: rand() * TAU
+    }));
+  }
+
+  function makeBossCores() {
+    return BOSS_CORE_DATA.map((c) => ({
+      x: c.x, y: c.y, r: TILE * 0.62, hp: 12, maxHp: 12, destroyed: false, pulse: rand() * TAU
+    }));
   }
 
   function makeBlocker(x, y, w, h, name) {
@@ -610,112 +806,94 @@
   }
 
 
+  // Stick-pile mini dams, each with a beaver who shares a (light) beaver fact.
+  const MINI_DAMS = [
+    { x: 1664, y: 2624, bx: 1768, by: 2600, name: "Bobr Budowniczy",
+      facts: ["Bobry buduja tamy, bo zwyczajnie nie znosza szumu plynacej wody.", "Tama zamienia rzeke w staw, a staw karmi pol lasu."] },
+    { x: 4288, y: 3168, bx: 4392, by: 3140, name: "Bobr od Wielkiej Tamy",
+      facts: ["Najwieksza bobrowa tama jest tak dluga, ze widac ja nawet z kosmosu.", "Bobr scina drzewo zebami, ktore rosna mu przez cale zycie."] },
+    { x: 7360, y: 2624, bx: 7256, by: 2600, name: "Bobr Tamiarz",
+      facts: ["Pod woda bobr widzi dzieki przezroczystej trzeciej powiece.", "Swieza galaz to dla bobra i obiad, i cegla na tame."] }
+  ];
+
   function makeBeaverNpcs() {
-    return [
+    const beavers = [
       {
-        name: "Stary Bobr",
-        x: 392,
-        y: 344,
-        r: 22,
-        phase: 0.2,
-        talkCooldown: 0,
+        name: "Stary Bobr", x: 392, y: 344, r: 22,
         lines: [
-          "Ludzie znikneli, a maszyny zostawily po sobie glodne serwerownie.",
-          "Bobry trzymaja lad. Delfiny pilnuja wody. Razem mamy jeszcze szanse.",
-          "Nie walcz z calym lasem naraz. Najpierw znajdz sciezke, potem slaby przewod.",
-          "Kazda serwerownia ma swoj cien. Zniszcz cien, a okolica zacznie oddychac."
+          "Ludzie znikneli, a maszyny zostawily glodne serwerownie.",
+          "Najpierw znajdz sciezke, potem slaby przewod. Nie walcz z calym lasem naraz."
         ],
-        randomLines: [
-          "Jestem przekonany, że gdyby wszyscy ludzie żyli w takiej prostocie jak ja nad stawem, nie znano by złodziejstwa ani rabunku.",
-          "Prostota, prostota, prostota! Powiadam wam, niech wasze sprawy będą dwiema lub trzema, a nie stu lub tysiącem.",
-          "Poranek to czas, kiedy się budzę i budzę we mnie intelekt. Najbardziej inspirująca część dnia to ta, kiedy człowiek wraca do życia z głębokiego snu."
+        facts: [
+          "Sowa potrafi obrocic glowe niemal w kolko, bo ma dwa razy wiecej kregow szyjnych niz ty.",
+          "Grzyby lacza pod ziemia korzenie drzew w jedna siec; nazywaja to lesnym internetem."
         ]
       },
       {
-        name: "Ciesla Tam",
-        x: 768,
-        y: 896,
-        r: 22,
-        phase: 1.6,
-        talkCooldown: 0,
+        name: "Ciesla Tam", x: 768, y: 896, r: 22,
         lines: [
           "Zbieraj kwiaty. Ogon rosnie powoli, ale kazdy platkowy sok pomaga.",
-          "J bierze albo upuszcza deske. K rzuca. Orzeszki zostaw na koty i wiewiorki.",
-          "Przy waskim strumieniu odloz deski na nurcie. Dwie dobrze ulozone wystarcza.",
-          "Jesli deska wskoczy prosto przez wode, to znaczy, ze znalazla swoje miejsce."
+          "J bierze albo upuszcza deske, K nia rzuca. Klawiszem L nakarmisz zdrowe zwierze, gdy przy nim stoisz."
+        ],
+        facts: [
+          "Dzieciol nie dostaje bolu glowy, bo ma w czaszce wbudowana naturalna poduszke."
         ]
       },
       {
-        name: "Mlody Zwiadowca",
-        x: 896,
-        y: 1664,
-        r: 21,
-        phase: 2.7,
-        talkCooldown: 0,
+        name: "Mlody Zwiadowca", x: 896, y: 1664, r: 21,
         lines: [
           "Nie spiesz sie do serwerowni. Najpierw poznaj mokre sciezki i stare nory.",
-          "Na dalszej rzece czasem wyskakuja delfiny. Na razie tylko obserwuja.",
-          "Rzeki przychodza zza scian krzakow. Tam gdzie nie wejdziesz, tam las zaczyna opowiesc.",
-          "Nie kazda droga jest prosta, ale wszystkie wielkie bramy stoja w poprzek postepu."
+          "Na glebszej rzece wyskakuja delfiny. Na razie tylko obserwuja."
+        ],
+        facts: [
+          "Wiewiorka zapomina, gdzie schowala wiekszosc orzechow, i tak sadzi nowe drzewa."
         ]
       },
       {
-        name: "Bobr od Zapachow",
-        x: 2368,
-        y: 2592,
-        r: 21,
-        phase: 3.4,
-        talkCooldown: 0,
+        name: "Bobr od Zapachow", x: 2368, y: 2592, r: 21,
         lines: [
-          "Kamery budza alarm, jesli wejdziesz w ich oko. Pod ziemia ida przewody.",
-          "Nora to nie skrot. To drugi las, tylko bez nieba.",
-          "Kable sa jak korzenie maszyn. Przetniesz prad, a oko kamery robi sie slepe.",
-          "Krety mowia cicho, ale wiedza, ktory przewod boli najbardziej."
+          "Kamery budza alarm, gdy wejdziesz w ich oko. Pod ziemia ida ich przewody.",
+          "Przetnij kabel kreta, a oko kamery robi sie slepe."
+        ],
+        facts: [
+          "Jez nosi na grzbiecie kilka tysiecy igiel i zwija sie w kulke, gdy sie boi."
         ]
       },
       {
-        name: "Bobr Przeprawowy",
-        x: 3968,
-        y: 1472,
-        r: 22,
-        phase: 4.2,
-        talkCooldown: 0,
+        name: "Bobr Przeprawowy", x: 3968, y: 1472, r: 22,
         lines: [
-          "Male rzeczki da sie oszukac deskami. Nie zawsze to potrzebne, ale las to pamieta.",
-          "Jesli nurt zacznie omijac deski, znaczy ze zrobiles cos bardzo bobrowego.",
-          "Nie kazda tama zatrzymuje rzeke. Czasem wystarczy pokazac jej ladniejszy zakret.",
-          "W glebi krzakow podobno ktos schowal butelke po bardzo nierozsadnym zielarzu."
+          "Male rzeczki da sie oszukac deskami; dwie dobrze ulozone wystarcza.",
+          "W glebi krzakow ktos schowal butelke po bardzo nierozsadnym zielarzu."
+        ],
+        facts: [
+          "Mrowka uniesie ciezar nawet piecdziesiat razy wiekszy od siebie."
         ]
       },
       {
-        name: "Bobr z Gorskiej Sciezki",
-        x: 6208,
-        y: 704,
-        r: 22,
-        phase: 5.1,
-        talkCooldown: 0,
+        name: "Bobr z Gorskiej Sciezki", x: 6208, y: 704, r: 22,
         lines: [
-          "W gorach technologia brzmi cieniej. Ale kamery widza dalej.",
-          "Nie wszystko trzeba gryzc. Czasem wystarczy przeczytac stara kartke w chacie.",
-          "Gorskie serwerownie sa wieksze, ale ich pycha robi je mniej uwaznymi.",
-          "Jesli brama wyglada obojetnie, to tylko czeka, az pierwszy raz ja ugryziesz."
+          "Gorskie serwerownie sa wieksze i pilnuje ich wiecej komputerow.",
+          "Nie wszystko trzeba gryzc. Czasem wystarczy przeczytac stara kartke w chacie."
+        ],
+        facts: [
+          "Jelen zrzuca poroze co roku i co roku zapuszcza nowe, wieksze."
         ]
       },
       {
-        name: "Bobr Nad Rzeka",
-        x: 7552,
-        y: 2560,
-        r: 22,
-        phase: 5.9,
-        talkCooldown: 0,
+        name: "Bobr Nad Rzeka", x: 7552, y: 2560, r: 22,
         lines: [
-          "Delfiny wyskakuja tylko tam, gdzie woda jest gleboka.",
-          "Jesli zobaczysz je nad ziemia, to znaczy, ze swiat znowu ma blad.",
-          "Za ostatnimi drzewami stoi data center. Tam muzyka sama robi sie ciezsza.",
-          "Po wszystkim nie uciekaj. Zobacz, czy natura naprawde wrocila na swoje miejsce."
+          "Za ostatnimi drzewami stoi data center, zamkniete elektryczna zaslona.",
+          "Zaslona opadnie, dopiero gdy padna wszystkie serwerownie w lesie."
+        ],
+        facts: [
+          "Delfiny spia tylko polowa mozgu naraz, zeby nigdy nie zapomniec, jak oddychac."
         ]
       }
     ];
+    for (const dam of MINI_DAMS) {
+      beavers.push({ name: dam.name, x: dam.bx, y: dam.by, r: 21, facts: dam.facts });
+    }
+    return beavers.map((b) => ({ ...b, phase: rand() * TAU, talkCooldown: 0 }));
   }
 
   function makeMoles() {
@@ -759,6 +937,19 @@
     return CABLE_DATA.map((cable) => ({ ...cable, cut: false, pulse: rand() * TAU }));
   }
 
+  // Healthy, un-infected animals roaming the open forest; feed one a nut to gain a companion.
+  function makeCritters() {
+    const spots = [
+      { type: "rabbit", x: 1216, y: 912, r: 12 },
+      { type: "hedgehog", x: 2752, y: 2496, r: 12 },
+      { type: "fawn", x: 4288, y: 2816, r: 18 },
+      { type: "squirrel", x: 5632, y: 2384, r: 12 },
+      { type: "rabbit", x: 6912, y: 3008, r: 12 },
+      { type: "fawn", x: 8576, y: 3456, r: 18 }
+    ];
+    return spots.map((s) => ({ ...s, ox: s.x, oy: s.y, phase: rand() * TAU, dir: rand() * TAU, near: false }));
+  }
+
   function buildDecor() {
     const items = [];
     let attempts = 0;
@@ -785,6 +976,14 @@
         hue: rand(),
         phase: rand() * TAU
       });
+    }
+    // hand-placed chewable bushes inside the data centre give the player ranged cover
+    const dcBushes = [
+      [8224, 1760], [8224, 2240], [8576, 1312], [8960, 1312],
+      [8224, 2848], [8224, 1440], [9216, 1632], [8576, 2848]
+    ];
+    for (const [x, y] of dcBushes) {
+      items.push({ type: "bush", x, y, r: 24, chewable: true, chewed: false, species: null, hue: rand(), phase: rand() * TAU });
     }
     return items;
   }
@@ -850,28 +1049,27 @@
       game.victoryAge += dt;
     }
     game.introTimer = Math.max(0, game.introTimer - dt);
-    game.dayClock += dt;
-    if (game.dayClock > 75) {
-      game.dayClock = 0;
-      game.days += 1;
-    }
+    if (game.inventoryOpen) { updateParticles(dt); return; }
     updatePlayer(dt);
     if (game.area === "surface") {
       updateNpcs(dt);
       updatePickups(dt);
       updatePlanks(dt);
-      updateStreams();
+      updateStreams(dt);
       updateSecurityCameras(dt);
       updateBlockers(dt);
       updateEnemies(dt);
+      updateCritters(dt);
       updateFollowers(dt);
       updateDolphins(dt);
       updateWildlife(dt);
       updateBoss(dt);
       updateShots(dt);
+      updateCurtain(dt);
     } else {
       updateMoles(dt);
       updateCaterpillars(dt);
+      updateIntel(dt);
     }
     updateParticles(dt);
     updateFloatText(dt);
@@ -914,7 +1112,7 @@
       p.x = best.ux;
       p.y = best.uy;
       p.swimming = false;
-      clearFollowers("water");
+      clearFollowers("burrow");
       game.message = "SCHODZISZ DO NORY";
     } else {
       const surface = BURROWS.find((burrow) => burrow.label === best.label) || BURROWS[0];
@@ -961,10 +1159,10 @@
 
     p.punchCooldown = Math.max(0, p.punchCooldown - dt);
     p.throwCooldown = Math.max(0, p.throwCooldown - dt);
-    p.nutCooldown = Math.max(0, p.nutCooldown - dt);
+    p.feedCooldown = Math.max(0, p.feedCooldown - dt);
     p.useCooldown = Math.max(0, p.useCooldown - dt);
     p.hurtCooldown = Math.max(0, p.hurtCooldown - dt);
-    p.shield = Math.max(0, p.shield - dt);
+    // spinach shield no longer ticks down; it holds until the beaver is hit
 
     if (keys.has("KeyE")) {
       if (!tryUseBurrow()) grabPlank();
@@ -1025,9 +1223,26 @@
     for (const server of game.servers) {
       if (server.destroyed) continue;
       for (const wall of roomWalls(server)) pushOutOfRect(entity, wall);
-      const push = entity.r + server.r + 8 - Math.hypot(entity.x - server.x, entity.y - server.y);
+      for (const core of server.cores) {
+        if (core.destroyed) continue;
+        const push = entity.r + core.r * 0.82 - Math.hypot(entity.x - core.x, entity.y - core.y);
+        if (push > 0) {
+          const a = Math.atan2(entity.y - core.y, entity.x - core.x);
+          entity.x += Math.cos(a) * push;
+          entity.y += Math.sin(a) * push;
+        }
+      }
+    }
+
+    // the electric curtain seals the data centre until every outer server room is down
+    if (!game.curtain.down && !game.worldRestored) pushOutOfRect(entity, game.curtain);
+
+    for (const wall of bossRoomWalls()) pushOutOfRect(entity, wall);
+    for (const core of game.bossCores) {
+      if (core.destroyed) continue;
+      const push = entity.r + core.r * 0.82 - Math.hypot(entity.x - core.x, entity.y - core.y);
       if (push > 0) {
-        const a = Math.atan2(entity.y - server.y, entity.x - server.x);
+        const a = Math.atan2(entity.y - core.y, entity.x - core.x);
         entity.x += Math.cos(a) * push;
         entity.y += Math.sin(a) * push;
       }
@@ -1051,12 +1266,12 @@
       p.punchCooldown = 0.34;
       return;
     }
-    clearFollowers("attack");
+    // fed animals stay with you while you fight; they only bolt if you swim or get hit
     p.punchCooldown = 0.46;
     camera.shake = Math.max(camera.shake, 2);
     playTone("punch");
 
-    const biteReach = 27 + Math.min(18, p.tailLevel * 1.35);
+    const biteReach = (p.longStick ? 44 : 27) + Math.min(18, p.tailLevel * 1.35);
     const hit = {
       x: p.x + Math.cos(p.facing) * biteReach,
       y: p.y + Math.sin(p.facing) * biteReach,
@@ -1099,10 +1314,14 @@
     plank.taken = false;
     plank.x = p.x + Math.cos(p.facing) * 30;
     plank.y = p.y + Math.sin(p.facing) * 30;
-    plank.angle = p.facing + 0.12;
-    plank.bob = rand() * TAU;
+    plank.angle = 0;
     plank.bridgeStreamIndex = null;
     const snapped = snapPlankToStream(plank);
+    if (!snapped) {
+      // a resting plank settles flat in the centre of a tile
+      plank.x = Math.floor(plank.x / TILE) * TILE + TILE / 2;
+      plank.y = Math.floor(plank.y / TILE) * TILE + TILE / 2;
+    }
     p.heldPlank = null;
     if (snapped) {
       game.message = "DESKA NA STRUMIENIU";
@@ -1148,7 +1367,6 @@
       playTone("blocked");
       return;
     }
-    clearFollowers("attack");
     p.throwCooldown = 0.55;
     const v = vectorFromAngle(p.facing, 520);
     p.heldPlank.bridgeStreamIndex = null;
@@ -1170,32 +1388,58 @@
     playTone("shoot");
   }
 
-  function throwNut() {
+  const CRITTER_NAMES = { rabbit: "KROLIK", hedgehog: "JEZ", fawn: "SARENKA", squirrel: "WIEWIORKA", duck: "KACZKA" };
+  const CRITTER_BYES = [
+    "Dzieki za orzeszka, bobrze. Wracam do swoich.",
+    "Bylo milo, ale wode czuje. Zmykam!",
+    "Najadlem sie. Ucinam sobie drzemke pod paproci.",
+    "Pa! Uwazaj na te brzeczace maszyny."
+  ];
+
+  // Approach a healthy animal and feed it a nut; it tags along until you swim, get hit, or 3 min pass.
+  function feedAnimal() {
     const p = game.player;
-    if (p.nutCooldown > 0) return;
+    if (p.feedCooldown > 0) return;
+    if (game.area !== "surface") return;
+    p.feedCooldown = 0.4;
+    let best = null;
+    let bestDistance = 80;
+    for (const critter of game.critters) {
+      const d = Math.hypot(critter.x - p.x, critter.y - p.y);
+      if (d < bestDistance) {
+        best = critter;
+        bestDistance = d;
+      }
+    }
+    if (!best) {
+      game.message = "PODEJDZ DO ZWIERZAKA, BY GO NAKARMIC";
+      game.messageTimer = 1.4;
+      playTone("blocked");
+      return;
+    }
     if (p.nuts <= 0) {
-      game.message = "BRAK ORZESZKOW";
-      game.messageTimer = 1.2;
+      game.message = "POTRZEBUJESZ ORZESZKA";
+      game.messageTimer = 1.4;
       playTone("blocked");
       return;
     }
     p.nuts -= 1;
-    p.nutCooldown = 0.42;
-    const v = vectorFromAngle(p.facing, 430);
-    playerShots.push({
-      type: "nut",
-      x: p.x + Math.cos(p.facing) * 22,
-      y: p.y + Math.sin(p.facing) * 22,
-      vx: v.x,
-      vy: v.y,
-      r: 8,
-      damage: 0.75,
-      life: 1.35,
-      angle: p.facing,
-      spin: 12,
-      color: "#9b6a35"
+    game.critters.splice(game.critters.indexOf(best), 1);
+    followers.push({
+      type: best.type,
+      x: best.x,
+      y: best.y,
+      r: best.r,
+      phase: rand() * TAU,
+      life: 180,
+      slot: followers.length,
+      bye: CRITTER_BYES[Math.floor(rand() * CRITTER_BYES.length)]
     });
-    playTone("nut");
+    game.message = (CRITTER_NAMES[best.type] || "ZWIERZAK") + " IDZIE ZA TOBA";
+    game.messageTimer = 2;
+    p.facing = Math.atan2(best.y - p.y, best.x - p.x);
+    burst(best.x, best.y, 22, "#f2d58a");
+    playTone("pickup");
   }
 
   function updatePlanks(dt) {
@@ -1229,10 +1473,16 @@
 
     hurtSecretHedges(hit, damage);
 
-    for (const server of game.servers) {
-      if (!server.destroyed && circleHit(hit, server, 8)) {
-        hurtServer(server, damage);
+    for (let i = 0; i < game.servers.length; i += 1) {
+      const server = game.servers[i];
+      if (server.destroyed) continue;
+      for (const core of server.cores) {
+        if (!core.destroyed && circleHit(hit, core, 8)) hurtServerCore(server, core, i, damage);
       }
+    }
+
+    for (const core of game.bossCores) {
+      if (!core.destroyed && circleHit(hit, core, 8)) hurtBossCore(core, damage);
     }
 
     const boss = game.boss;
@@ -1361,38 +1611,90 @@
     }
   }
 
-  function hurtServer(server, damage) {
-    wakeDefense(game.servers.indexOf(server));
-    server.hp -= server.powered ? damage : damage * 1.35;
-    server.pulse += 0.9;
+  function hurtServerCore(server, core, index, damage) {
+    wakeDefense(index);
+    core.hp -= server.powered ? damage : damage * 1.35;
+    core.pulse += 0.9;
+    server.pulse += 0.5;
     camera.shake = Math.max(camera.shake, 5);
-    burst(server.x, server.y, 12, palette.aiBlue);
+    burst(core.x, core.y, 12, palette.aiBlue);
     playTone("core");
 
     for (const enemy of game.enemies) {
-      if (enemy.serverIndex === game.servers.indexOf(server)) enemy.aggro = true;
+      if (enemy.serverIndex === index) enemy.aggro = true;
     }
 
-    if (server.hp <= 0 && !server.destroyed) {
+    if (core.hp <= 0 && !core.destroyed) {
+      core.destroyed = true;
+      core.hp = 0;
+      burst(core.x, core.y, 30, palette.leafLight);
+      camera.shake = Math.max(camera.shake, 8);
+      playTone("objectBreak");
+    }
+    if (server.cores.every((c) => c.destroyed) && !server.destroyed) {
       server.destroyed = true;
-      server.hp = 0;
-      game.message = server.name + " DOWN";
+      game.message = "#" + server.num + " " + server.name + " DOWN";
       game.messageTimer = 2.6;
       burst(server.x, server.y, 64, palette.leafLight);
       camera.shake = Math.max(camera.shake, 14);
       playTone("objectBreak");
       playTone("restore");
       spawnFriendlyRing(server.x, server.y);
+      dropServerStone(server);
+      checkCurtain();
+    }
+  }
+
+  // A colourful gem appears at the centre of a conquered server room; pick it up to read its lore.
+  function dropServerStone(server) {
+    if (server.stoneDropped || !server.stone) return;
+    server.stoneDropped = true;
+    game.gems.push({
+      x: server.x, y: server.y, r: 16,
+      label: server.stone.label, color: server.stone.color, desc: server.stone.desc,
+      pulse: rand() * TAU, taken: false
+    });
+  }
+
+  function checkCurtain() {
+    if (game.curtain.down) return;
+    if (game.servers.every((s) => s.destroyed)) {
+      game.curtain.down = true;
+      game.message = "ZASLONA ELEKTRYCZNA OPADA";
+      game.messageTimer = 3;
+      camera.shake = Math.max(camera.shake, 12);
+      burst(game.curtain.x + game.curtain.w / 2, game.curtain.y + game.curtain.h / 2, 60, palette.aiBlue);
+      playTone("restore");
+    }
+  }
+
+  function hurtBossCore(core, damage) {
+    wakeDefense(null);
+    core.hp -= damage;
+    core.pulse += 1;
+    camera.shake = Math.max(camera.shake, 5);
+    burst(core.x, core.y, 12, palette.aiViolet);
+    playTone("core");
+    if (core.hp <= 0 && !core.destroyed) {
+      core.destroyed = true;
+      core.hp = 0;
+      burst(core.x, core.y, 40, palette.leafLight);
+      camera.shake = Math.max(camera.shake, 10);
+      playTone("objectBreak");
+      const left = bossCoresLeftCount();
+      game.message = left > 0 ? "WEZEL AI PADL: ZOSTALO " + left : "RDZEN AI ODSLONIETY";
+      game.messageTimer = 2.2;
+      playTone(left > 0 ? "restore" : "exposed");
     }
   }
 
   function hurtBoss(damage) {
     wakeDefense(null);
     const boss = game.boss;
-    const coresLeft = coresLeftCount();
+    const coresLeft = bossCoresLeftCount();
     if (coresLeft > 0) {
       boss.hitFlash = 0.12;
-      game.message = "AI SHIELD: " + coresLeft + " CORES";
+      game.message = "TARCZA AI: ZNISZCZ " + coresLeft + " WEZLOW";
       game.messageTimer = 1.4;
       burst(boss.x, boss.y, 10, palette.aiViolet);
       playTone("blocked");
@@ -1423,11 +1725,13 @@
     game.alarmTimer = 0;
     game.message = "";
     game.messageTimer = 0;
+    game.curtain.down = true;
     for (const server of game.servers) {
       server.destroyed = true;
       server.powered = false;
-      server.hp = 0;
+      for (const core of server.cores) core.destroyed = true;
     }
+    for (const core of game.bossCores) core.destroyed = true;
     for (const blocker of game.blockers) {
       blocker.destroyed = true;
       blocker.awake = false;
@@ -1440,8 +1744,10 @@
   }
 
   function updatePickups(dt) {
+    const p = game.player;
     for (const pickup of game.pickups) {
-      pickup.bob += dt * 3;
+      // only the special floating items still bob; flowers/nuts stay still in their tile
+      if (pickup.type === "spinach" || pickup.type === "elixir" || pickup.type === "stick" || pickup.type === "heart") pickup.bob += dt * 3;
       if (pickup.taken) {
         if (pickup.type === "spinach") {
           pickup.respawn -= dt;
@@ -1449,36 +1755,112 @@
         }
         continue;
       }
-      if (circleHit(game.player, pickup, 8)) {
+      if (circleHit(p, pickup, 8)) {
         pickup.taken = true;
         if (pickup.type === "flower") {
-          game.player.tailLevel += 0.25;
+          p.tailLevel += 0.25;
           const flower = flowerInfo(pickup.species);
           game.message = flower.label + ": OGON +";
           game.messageTimer = 2.4;
           burst(pickup.x, pickup.y, 30, flower.petals);
           playTone("pickup");
         } else if (pickup.type === "nut") {
-          game.player.nuts = Math.min(6, game.player.nuts + 1);
-          game.message = "ORZESZEK +1";
-          game.messageTimer = 1.5;
+          p.nuts = Math.min(6, p.nuts + 1);
+          game.message = "ORZESZEK +1 (KARMA DLA ZWIERZAT)";
+          game.messageTimer = 1.6;
           burst(pickup.x, pickup.y, 18, "#b77b43");
           playTone("pickup");
         } else if (pickup.type === "elixir") {
-          game.player.tailLevel = Math.max(2, game.player.tailLevel * 2);
+          p.tailLevel = Math.max(2, p.tailLevel * 2);
           game.message = "ELIKSIR OGONA x2";
           game.messageTimer = 2.8;
           burst(pickup.x, pickup.y, 48, palette.aiViolet);
           playTone("restore");
+        } else if (pickup.type === "stick") {
+          p.longStick = true;
+          addItem("stick");
+          game.message = "SUPER DLUGI PATYK";
+          game.messageTimer = 2.8;
+          burst(pickup.x, pickup.y, 40, palette.plank);
+          playTone("restore");
+        } else if (pickup.type === "heart") {
+          p.maxHp += 2;
+          p.hp = p.maxHp;
+          game.message = "SERCE LASU: ZYCIE +2";
+          game.messageTimer = 2.8;
+          burst(pickup.x, pickup.y, 44, palette.red);
+          playTone("restore");
         } else {
           pickup.respawn = 24;
-          game.player.shield = Math.min(14, game.player.shield + 9.5);
-          game.message = "SPINACH SHIELD";
+          p.shield = 1;
+          game.message = "TARCZA ZE SZPINAKU";
           game.messageTimer = 1.9;
           burst(pickup.x, pickup.y, 28, palette.spinach);
           playTone("shield");
         }
       }
+    }
+
+    // colourful gems left by toppled server rooms
+    for (const gem of game.gems) {
+      if (gem.taken) continue;
+      gem.pulse += dt * 3;
+      if (circleHit(p, gem, 10)) {
+        gem.taken = true;
+        addItem("gem", gem);
+        game.message = gem.label + " ZEBRANY";
+        game.messageTimer = 2.4;
+        burst(gem.x, gem.y, 30, gem.color);
+        playTone("pickup");
+      }
+    }
+  }
+
+  // Adds a described item to the inventory (deduplicated). Items carry effects elsewhere.
+  function addItem(id, extra) {
+    if (id !== "gem" && id !== "intel" && game.items.some((it) => it.id === id)) return;
+    let entry;
+    if (id === "gem") entry = { id: "gem", label: extra.label, desc: extra.desc, color: extra.color };
+    else if (id === "intel") entry = { id: "intel", label: extra.label, desc: extra.desc, color: "#9fe7ff" };
+    else entry = { id, ...ITEM_LIBRARY[id] };
+    game.items.push(entry);
+  }
+
+  function updateCurtain(dt) {
+    game.curtain.pulse += dt * 4;
+    if (game.curtain.down) return;
+    const p = game.player;
+    const cx = game.curtain.x + game.curtain.w / 2;
+    const cy = game.curtain.y + game.curtain.h / 2;
+    if (Math.hypot(p.x - cx, p.y - cy) < 150 && !game.curtain.messageShown) {
+      game.curtain.messageShown = true;
+      game.message = "ZASLONA ELEKTRYCZNA: ZNISZCZ WSZYSTKIE SERWEROWNIE (" + serversLeftCount() + ")";
+      game.messageTimer = 3;
+      playTone("blocked");
+    } else if (Math.hypot(p.x - cx, p.y - cy) > 240) {
+      game.curtain.messageShown = false;
+    }
+  }
+
+  function updateCritters(dt) {
+    const p = game.player;
+    for (const critter of game.critters) {
+      critter.phase += dt * 2;
+      if (rand() < dt * 0.4) critter.dir += (rand() - 0.5) * 1.1;
+      const oldX = critter.x;
+      const oldY = critter.y;
+      const speed = critter.type === "fawn" ? 22 : critter.type === "hedgehog" ? 12 : 26;
+      // critters mill around their home and shy away from water/walls
+      if (Math.hypot(critter.x - critter.ox, critter.y - critter.oy) > 150) critter.dir = angleTo(critter, { x: critter.ox, y: critter.oy });
+      critter.x += Math.cos(critter.dir) * speed * dt;
+      critter.y += Math.sin(critter.dir) * speed * dt;
+      if (pointHitsAny(critter.x, critter.y, ALL_WATER_RECTS, critter.r + 8) || pointHitsAny(critter.x, critter.y, TERRAIN_SOLIDS, critter.r + 6) || rectHitsAny({ x: critter.x - critter.r, y: critter.y - critter.r, w: critter.r * 2, h: critter.r * 2 }, SERVER_SITE_RECTS)) {
+        critter.x = oldX;
+        critter.y = oldY;
+        critter.dir += Math.PI * 0.7;
+      }
+      // a friendly prompt when you are close enough to feed it
+      critter.near = Math.hypot(critter.x - p.x, critter.y - p.y) < 80;
     }
   }
 
@@ -1572,14 +1954,23 @@
     }
     if (!best || best.talkCooldown > 0) return false;
     best.talkCooldown = 1.3;
-    const lines = best.randomLines ? [best.randomLines[Math.floor(rand() * best.randomLines.length)]] : best.lines;
+    // Pick ONE short utterance (lore or a fun fact) and cap it at two sentences.
+    const pool = (best.facts && best.lines) ? (rand() < 0.5 ? best.facts : best.lines) : (best.lines || best.facts);
+    const line = pool[Math.floor(rand() * pool.length)];
     game.message = best.name;
-    game.messageTimer = 4.8;
-    game.dialogLines = lines;
-    game.dialogTimer = best.randomLines ? 8.2 : 6.2;
+    game.messageTimer = 4.2;
+    game.dialogLines = [capSentences(line, 2)];
+    game.dialogTimer = 5.4;
     p.facing = Math.atan2(best.y - p.y, best.x - p.x);
     playTone("pickup");
     return true;
+  }
+
+  // Trims any text down to at most `max` sentences so nobody monologues.
+  function capSentences(text, max) {
+    const parts = text.match(/[^.!?]+[.!?]?/g);
+    if (!parts) return text;
+    return parts.slice(0, max).join("").trim();
   }
 
 
@@ -1606,30 +1997,22 @@
     return true;
   }
 
+  // Followers scatter when you swim or get hurt (reason set), and wave goodbye as they go.
   function clearFollowers(reason) {
     if (!followers.length) return;
-    if (reason === "attack") {
-      game.message = "TOWARZYSZE UCIEKLI";
-      game.messageTimer = 1.4;
+    if (reason === "water" || reason === "hurt" || reason === "burrow") {
+      for (const follower of followers) sayFollowerBye(follower);
+      game.message = reason === "water" ? "ZWIERZETA NIE WCHODZA DO WODY"
+        : reason === "burrow" ? "ZWIERZETA ZOSTAJA NA POWIERZCHNI"
+        : "ZWIERZETA SPLOSZONE";
+      game.messageTimer = 1.6;
     }
     followers.length = 0;
   }
 
-  function tameAnimal(enemy) {
-    enemy.hp = 0;
-    followers.push({
-      type: enemy.type,
-      x: enemy.x,
-      y: enemy.y,
-      r: enemy.r,
-      phase: rand() * TAU,
-      life: 180,
-      slot: followers.length
-    });
-    game.message = enemy.type === "cat" ? "KOT IDZIE ZA TOBA" : "WIEWIORKA IDZIE ZA TOBA";
-    game.messageTimer = 2.2;
-    burst(enemy.x, enemy.y, 24, "#f2d58a");
-    playTone("pickup");
+  function sayFollowerBye(follower) {
+    if (!follower.bye) return;
+    floatText.push({ x: follower.x, y: follower.y - 22, text: follower.bye, color: palette.cream, life: 2.4, maxLife: 2.4 });
   }
 
   function updateFollowers(dt) {
@@ -1645,7 +2028,10 @@
       follower.y = lerp(follower.y, targetY, 1 - Math.pow(0.02, dt));
     }
     for (let i = followers.length - 1; i >= 0; i -= 1) {
-      if (followers[i].life <= 0) followers.splice(i, 1);
+      if (followers[i].life <= 0) {
+        sayFollowerBye(followers[i]);
+        followers.splice(i, 1);
+      }
     }
   }
 
@@ -1702,6 +2088,21 @@
     }
   }
 
+  function updateIntel() {
+    const p = game.player;
+    for (const spot of game.intel) {
+      if (spot.taken) continue;
+      if (Math.hypot(spot.x - p.x, spot.y - p.y) < 40) {
+        spot.taken = true;
+        addItem("intel", spot);
+        game.message = spot.label + " ZEBRANY";
+        game.messageTimer = 2.4;
+        burst(spot.x, spot.y, 26, palette.aiBlue);
+        playTone("pickup");
+      }
+    }
+  }
+
   function caterpillarInTunnel(caterpillar) {
     return UNDER_TUNNELS.some((rect) => pointInRect(caterpillar.x, caterpillar.y, rect, -caterpillar.r - 3));
   }
@@ -1749,9 +2150,14 @@
     for (const cable of game.cables) {
       if (cable.cut || !rectCircleHit(hit, cable, 8)) continue;
       cable.cut = true;
-      const server = game.servers[cable.serverIndex];
-      if (server) server.powered = false;
-      game.message = server ? server.name + " BEZ PRADU" : "KABEL PRZEGRYZIONY";
+      if (cable.dataFeed) {
+        game.dataFeedCut = true;
+        game.message = "DATA CENTER: KAMERY BEZ PRADU";
+      } else {
+        const server = game.servers[cable.serverIndex];
+        if (server) server.powered = false;
+        game.message = server ? "#" + server.num + " " + server.name + ": KAMERY BEZ PRADU" : "KABEL PRZEGRYZIONY";
+      }
       game.messageTimer = 2.3;
       burst(hit.x, hit.y, 34, palette.aiBlue);
       playTone("objectBreak");
@@ -1770,16 +2176,28 @@
       game.message = cabin.title;
       game.messageTimer = 4.8;
       if (cabin.item === "book") {
+        p.book = true;
+        addItem("book");
         game.dialogLines = ["Na wilgotnej stronie czytasz: kiedy las zapomina cisze, trzeba zaczac od odnalezienia zrodla brzeczenia."];
         game.dialogTimer = 6.2;
       } else if (cabin.item === "hat") {
         p.hat = true;
+        addItem("hat");
         game.dialogLines = ["Zakladasz czapke. Jest za duza i pachnie kurzem, ale wyglada dzielnie."];
         game.dialogTimer = 4.2;
-      } else {
+      } else if (cabin.item === "boots") {
         p.boots = true;
+        addItem("boots");
         game.dialogLines = ["Buty sa ludzkie i kompletnie niepraktyczne dla bobra. Mimo to przez chwile czujesz sie elegancko."];
         game.dialogTimer = 4.8;
+      } else if (cabin.item === "flashlight") {
+        p.tailLight = true;
+        addItem("flashlight");
+        game.dialogLines = ["Zapinasz latarke na ogon. Teraz w norach widzisz znacznie dalej niz dotad."];
+        game.dialogTimer = 5;
+      } else {
+        game.dialogLines = ["Pusty dom na skraju lasu. Ktos tu kiedys mieszkal, zanim maszyny zajely sie liczeniem drzew."];
+        game.dialogTimer = 4.6;
       }
       playTone("pickup");
       return true;
@@ -1799,21 +2217,46 @@
         if (!pointInCameraCone(p.x, p.y, camera)) continue;
         server.alarmCooldown = 4.5;
         game.alarmTimer = 2.8;
-        game.message = "ALARM KAMERY: " + server.name;
+        game.message = "ALARM KAMERY #" + server.num + ": " + server.name;
         game.messageTimer = 2.4;
         wakeDefense(i);
         playTone("blocked");
         break;
       }
     }
+    // data-center cameras, powered from the underground feed cable
+    game.dataCamCooldown = Math.max(0, (game.dataCamCooldown || 0) - dt);
+    if (!game.worldRestored && !game.boss.defeated && !game.dataFeedCut && game.dataCamCooldown <= 0) {
+      for (const camera of dataCenterCameras()) {
+        if (!pointInCameraCone(p.x, p.y, camera)) continue;
+        game.dataCamCooldown = 4.5;
+        game.alarmTimer = 2.8;
+        game.message = "ALARM KAMERY: DATA CENTER";
+        game.messageTimer = 2.4;
+        wakeDefense(null);
+        playTone("blocked");
+        break;
+      }
+    }
   }
 
+  // Cameras sit on the room walls (drawn as glowing dots) and sweep the approaches.
   function serverCameras(server) {
     const b = roomBounds(server);
     return [
-      { x: b.x - 12, y: b.y + TILE, a: Math.PI, range: 330, spread: 0.45 },
-      { x: b.x + b.w + 12, y: b.y + b.h - TILE, a: 0, range: 330, spread: 0.45 },
-      { x: server.x, y: b.y - 12, a: -Math.PI / 2, range: 300, spread: 0.42 }
+      { x: b.x + 4, y: b.y + TILE, a: Math.PI, range: 330, spread: 0.45 },
+      { x: b.x + b.w - 4, y: b.y + b.h - TILE, a: 0, range: 330, spread: 0.45 },
+      { x: server.x, y: b.y + 4, a: -Math.PI / 2, range: 300, spread: 0.42 }
+    ];
+  }
+
+  function dataCenterCameras() {
+    const d = DATA_CENTER;
+    return [
+      { x: d.x + 6, y: d.y + TILE * 4, a: Math.PI, range: 360, spread: 0.4 },
+      { x: d.x + 6, y: d.y + TILE * 8, a: Math.PI, range: 360, spread: 0.4 },
+      { x: d.x + d.w / 2, y: d.y + 6, a: -Math.PI / 2, range: 340, spread: 0.4 },
+      { x: d.x + d.w - 6, y: d.y + d.h / 2, a: 0, range: 340, spread: 0.4 }
     ];
   }
 
@@ -1826,7 +2269,7 @@
     return Math.abs(diff) < camera.spread;
   }
 
-  function updateStreams() {
+  function updateStreams(dt) {
     for (let i = 0; i < SMALL_STREAM_RECTS.length; i += 1) {
       const stream = SMALL_STREAM_RECTS[i];
       const planks = game.planks.filter((plank) => !plank.taken && plank.bridgeStreamIndex === i);
@@ -1838,7 +2281,32 @@
         game.messageTimer = 2.1;
         playTone("restore");
       }
+      // a golden dolphin leaps over the bridge every 10-15s
+      if (stream.bridged) {
+        stream.goldenTimer -= dt;
+        if (stream.goldenTimer <= 0) {
+          stream.goldenTimer = 10 + rand() * 5;
+          spawnGoldenDolphin(stream, planks);
+        }
+      } else {
+        stream.goldenTimer = 10 + rand() * 5;
+      }
     }
+  }
+
+  function spawnGoldenDolphin(stream, planks) {
+    const plank = planks[Math.floor(rand() * planks.length)] || { x: stream.x + stream.w / 2, y: stream.y + stream.h / 2 };
+    const horizontal = stream.w > stream.h;
+    dolphins.push({
+      x: plank.x,
+      y: plank.y,
+      dir: horizontal ? Math.PI / 2 : 0,
+      travel: horizontal ? stream.h + 120 : stream.w + 120,
+      life: 1.9,
+      maxLife: 1.9,
+      phase: rand() * TAU,
+      golden: true
+    });
   }
 
   function shootEnemy(enemy, target) {
@@ -1871,7 +2339,7 @@
     const d = dist(boss, p);
     if (!game.defenseAwake) return;
     if (d < 520 && boss.shootCooldown <= 0) {
-      const exposed = coresLeftCount() === 0;
+      const exposed = bossCoresLeftCount() === 0;
       boss.shootCooldown = exposed ? 1.25 : 1.75;
       const waves = exposed ? 2 : 1;
       for (let i = 0; i < waves; i += 1) {
@@ -1895,9 +2363,9 @@
       hurtPlayer(2, angleTo(boss, p));
     }
 
-    if (coresLeftCount() === 0 && !boss.exposedText) {
+    if (bossCoresLeftCount() === 0 && !boss.exposedText) {
       boss.exposedText = true;
-      game.message = "ROOT AI EXPOSED";
+      game.message = "RDZEN AI ODSLONIETY";
       game.messageTimer = 2.8;
       playTone("exposed");
     }
@@ -1924,30 +2392,8 @@
     return false;
   }
 
-  function steerNut(shot, dt) {
-    let best = null;
-    let bestDistance = 170;
-    for (const enemy of game.enemies) {
-      if (enemy.hp <= 0 || (enemy.type !== "cat" && enemy.type !== "squirrel")) continue;
-      const d = Math.hypot(enemy.x - shot.x, enemy.y - shot.y);
-      if (d < bestDistance) {
-        best = enemy;
-        bestDistance = d;
-      }
-    }
-    if (!best) return;
-    const speed = Math.hypot(shot.vx, shot.vy) || 360;
-    const current = Math.atan2(shot.vy, shot.vx);
-    const target = Math.atan2(best.y - shot.y, best.x - shot.x);
-    const diff = Math.atan2(Math.sin(target - current), Math.cos(target - current));
-    const next = current + clamp(diff, -dt * 5.2, dt * 5.2);
-    shot.vx = Math.cos(next) * speed;
-    shot.vy = Math.sin(next) * speed;
-  }
-
   function updateShots(dt) {
     for (const shot of playerShots) {
-      if (shot.type === "nut") steerNut(shot, dt);
       shot.x += shot.vx * dt;
       shot.y += shot.vy * dt;
       shot.life -= dt;
@@ -1962,15 +2408,10 @@
         continue;
       }
 
+      const dir = Math.atan2(shot.vy, shot.vx);
       for (const enemy of game.enemies) {
-        const hitExtra = shot.type === "nut" ? 18 : 0;
-        if (enemy.hp > 0 && circleHit(shot, enemy, hitExtra)) {
-          if (shot.type === "nut" && (enemy.type === "cat" || enemy.type === "squirrel")) {
-            tameAnimal(enemy);
-          } else {
-            if (shot.type === "nut" && !(enemy.type === "cat" || enemy.type === "squirrel")) clearFollowers("attack");
-            hurtEnemy(enemy, shot.damage, Math.atan2(shot.vy, shot.vx));
-          }
+        if (enemy.hp > 0 && circleHit(shot, enemy)) {
+          hurtEnemy(enemy, shot.damage, dir);
           shot.life = -1;
           break;
         }
@@ -1985,9 +2426,22 @@
         }
       }
       if (shot.life > 0) {
-        for (const server of game.servers) {
-          if (!server.destroyed && circleHit(shot, server, 6)) {
-            hurtServer(server, shot.damage);
+        for (let i = 0; i < game.servers.length && shot.life > 0; i += 1) {
+          const server = game.servers[i];
+          if (server.destroyed) continue;
+          for (const core of server.cores) {
+            if (!core.destroyed && circleHit(shot, core, 6)) {
+              hurtServerCore(server, core, i, shot.damage);
+              shot.life = -1;
+              break;
+            }
+          }
+        }
+      }
+      if (shot.life > 0) {
+        for (const core of game.bossCores) {
+          if (!core.destroyed && circleHit(shot, core, 6)) {
+            hurtBossCore(core, shot.damage);
             shot.life = -1;
             break;
           }
@@ -2036,16 +2490,20 @@
     p.hurtCooldown = 0.78;
     clearFollowers("hurt");
     if (p.shield > 0) {
-      p.shield = Math.max(0, p.shield - damage * 1.1);
-      damage *= 0.15;
-      burst(p.x, p.y, 16, palette.spinach);
+      // the spinach shield holds until the first hit, then shatters and is gone
+      p.shield = 0;
+      burst(p.x, p.y, 20, palette.spinach);
       playTone("blocked");
-    } else {
-      burst(p.x, p.y, 14, palette.red);
-      playTone("hurt");
+      game.message = "TARCZA PEKLA";
+      game.messageTimer = 1.2;
+      camera.shake = Math.max(camera.shake, 4);
+      p.x += Math.cos(direction) * 8;
+      p.y += Math.sin(direction) * 8;
+      return;
     }
-    const tailLoss = damage * (p.shield > 0 ? 0.15 : 0.45);
-    p.tailLevel = Math.max(0, p.tailLevel - tailLoss);
+    burst(p.x, p.y, 14, palette.red);
+    playTone("hurt");
+    p.tailLevel = Math.max(0, p.tailLevel - damage * 0.45);
     p.hp -= damage;
     p.x += Math.cos(direction) * 12;
     p.y += Math.sin(direction) * 12;
@@ -2100,23 +2558,28 @@
     ctx.translate(Math.round(-camera.x + shakeX), Math.round(-camera.y + shakeY));
     if (game.area === "underground") {
       drawUndergroundWorld();
+      drawIntel();
       drawCaterpillars();
       drawMoles();
       drawPlayer();
       drawParticles();
+      drawFloatText();
     } else {
       drawWorld();
       drawDataCenter();
       drawForestWalls();
       drawDecor();
+      drawMiniDams();
       drawVictoryFlowers();
       drawSecretHedges();
       drawCabins();
       drawBurrows();
       drawPickups();
+      drawGems();
       drawPlanks();
       drawDolphins();
       drawNpcs();
+      drawCritters();
       drawSecurityCameras();
       drawBlockers();
       drawServers();
@@ -2128,13 +2591,31 @@
       drawShots();
       drawPlayer();
       drawParticles();
+      drawFloatText();
     }
     ctx.restore();
 
     if (game.area === "underground") drawUndergroundFog(size);
     if (game.state !== "menu") drawHud(size);
     drawVignette(size);
+    if (game.inventoryOpen) drawInventory(size);
     drawOverlay(size);
+  }
+
+  function drawFloatText() {
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.font = "800 13px Inter, system-ui, sans-serif";
+    for (const t of floatText) {
+      ctx.globalAlpha = clamp(t.life / 0.6, 0, 1);
+      ctx.fillStyle = "rgba(13, 18, 16, 0.7)";
+      const w = ctx.measureText(t.text).width + 16;
+      ctx.fillRect(Math.round(t.x - w / 2), Math.round(t.y - 12), Math.round(w), 18);
+      ctx.fillStyle = t.color || palette.cream;
+      ctx.fillText(t.text, Math.round(t.x), Math.round(t.y + 1));
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
   }
 
   function drawWorld() {
@@ -2159,7 +2640,7 @@
       }
     }
 
-    if (!game.boss.defeated) drawCorruptionField(game.boss.x, game.boss.y, 600, coresLeftCount() ? 0.28 : 0.2);
+    if (!game.boss.defeated) drawCorruptionField(game.boss.x, game.boss.y, 600, bossCoresLeftCount() ? 0.28 : 0.2);
     if (game.state === "won") drawRestoredField(game.boss.x, game.boss.y, 700, 0.28);
   }
 
@@ -2310,7 +2791,8 @@
     for (let y = hedge.y; y < hedge.y + hedge.h; y += TILE) {
       for (let x = hedge.x; x < hedge.x + hedge.w; x += TILE) drawBushTile(x, y, false, false);
     }
-    ctx.fillStyle = `rgba(136, 255, 118, ${0.16 + Math.sin(game.time * 2 + hedge.pulse) * 0.06})`;
+    // only the faintest shimmer hints there is something behind these particular bushes
+    ctx.fillStyle = `rgba(136, 255, 118, ${0.04 + Math.max(0, Math.sin(game.time * 1.3 + hedge.pulse)) * 0.04})`;
     ctx.fillRect(hedge.x + 8, hedge.y + 8, hedge.w - 16, hedge.h - 16);
     ctx.restore();
   }
@@ -2319,13 +2801,21 @@
     const wall = 16;
     const door = TILE;
     const doorX = cabin.x + cabin.w / 2 - door / 2;
-    return [
+    const walls = [
       { x: cabin.x, y: cabin.y, w: cabin.w, h: wall },
       { x: cabin.x, y: cabin.y, w: wall, h: cabin.h },
       { x: cabin.x + cabin.w - wall, y: cabin.y, w: wall, h: cabin.h },
       { x: cabin.x, y: cabin.y + cabin.h - wall, w: doorX - cabin.x, h: wall },
       { x: doorX + door, y: cabin.y + cabin.h - wall, w: cabin.x + cabin.w - doorX - door, h: wall }
     ];
+    // big cabins are split into rooms by an interior wall with its own doorway
+    if (cabin.big) {
+      const px = cabin.x + Math.round(cabin.w * 0.52);
+      const gap = cabin.y + cabin.h * 0.55;
+      walls.push({ x: px, y: cabin.y + wall, w: wall, h: gap - (cabin.y + wall) });
+      walls.push({ x: px, y: gap + door, w: wall, h: cabin.y + cabin.h - wall - (gap + door) });
+    }
+    return walls;
   }
 
   function dataCenterWalls() {
@@ -2364,25 +2854,19 @@
     ctx.save();
     drawGridRect(d.x, d.y, d.w, d.h, "#252d30", "rgba(105, 215, 255, 0.13)");
 
-    ctx.fillStyle = "#3e4749";
-    ctx.fillRect(d.x + TILE, d.y + TILE * 11, d.w - TILE * 2, TILE * 4);
-    ctx.fillStyle = "rgba(105, 215, 255, 0.18)";
-    ctx.fillRect(d.x + TILE, d.y + TILE * 12 + 26, d.w - TILE * 2, 9);
-    ctx.fillStyle = "rgba(228, 84, 154, 0.18)";
-    ctx.fillRect(d.x + TILE * 2, d.y + TILE * 14 + 12, d.w - TILE * 4, 7);
-
+    const bossOuter = { x: BOSS_ROOM.x - TILE, y: BOSS_ROOM.y - TILE, w: BOSS_ROOM.w + TILE * 2, h: BOSS_ROOM.h + TILE * 2 };
     for (let y = d.y + TILE * 2; y < d.y + d.h - TILE * 2; y += TILE * 3) {
       for (let x = d.x + TILE * 2; x < d.x + d.w - TILE * 3; x += TILE * 3) {
-        if (Math.hypot(x + 32 - BOSS_X, y + 32 - BOSS_Y) < 260) continue;
-        if (rectsOverlap({ x, y, w: TILE, h: TILE * 2 }, roomBounds(game.servers[5]))) continue;
+        const rk = { x, y, w: TILE, h: TILE * 2 };
+        if (rectsOverlap(rk, bossOuter)) continue;
+        if (rectsOverlap(rk, game.curtain)) continue;
+        if (game.bossCores.some((c) => Math.hypot(x + 32 - c.x, y + 64 - c.y) < TILE * 1.7)) continue;
         drawRack(x, y, pulse, true);
       }
     }
 
-    ctx.strokeStyle = `rgba(228, 84, 154, ${0.28 + pulse * 0.22})`;
-    ctx.lineWidth = 5;
-    ctx.strokeRect(BOSS_X - TILE * 2 + 0.5, BOSS_Y - TILE * 2 + 0.5, TILE * 4 - 1, TILE * 4 - 1);
-    ctx.strokeRect(BOSS_X - TILE * 3 + 0.5, BOSS_Y - TILE * 3 + 0.5, TILE * 6 - 1, TILE * 6 - 1);
+    drawBossCores();
+    drawBossRoom();
 
     for (const wall of dataCenterWalls()) {
       ctx.fillStyle = "#4b5256";
@@ -2390,8 +2874,122 @@
       ctx.strokeStyle = "rgba(245, 238, 209, 0.12)";
       ctx.strokeRect(wall.x + 0.5, wall.y + 0.5, wall.w - 1, wall.h - 1);
     }
-    ctx.fillStyle = "rgba(245, 238, 209, 0.2)";
-    ctx.fillRect(d.x, d.y + TILE * 11 + 16, TILE, TILE * 4 - 32);
+    drawDataCurtain();
+    ctx.restore();
+    drawSmog(d);
+  }
+
+  function drawBossCores() {
+    const t = game.time;
+    for (const core of game.bossCores) {
+      const x = Math.round(core.x);
+      const y = Math.round(core.y);
+      if (core.destroyed) {
+        ctx.fillStyle = "#2d6e39";
+        ctx.fillRect(x - 22, y + 6, 44, 12);
+        drawTinyFlower({ x, y: y - 6, phase: x + y }, true);
+        continue;
+      }
+      const pulse = Math.sin(t * 5 + core.pulse) * 0.5 + 0.5;
+      // boss cores glow violet/amber, clearly different from the blue racks
+      ctx.fillStyle = "#1a1422";
+      ctx.fillRect(x - 24, y - 30, 48, 60);
+      ctx.fillStyle = "#2a2036";
+      ctx.fillRect(x - 18, y - 24, 36, 48);
+      ctx.fillStyle = palette.aiViolet;
+      ctx.globalAlpha = 0.5 + pulse * 0.45;
+      for (let yy = y - 18; yy < y + 22; yy += 12) ctx.fillRect(x - 13, yy, 26, 6);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = `rgba(255, 198, 90, ${0.5 + pulse * 0.4})`;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x - 24.5, y - 30.5, 48, 60);
+      ctx.fillStyle = "rgba(255, 198, 90, 0.9)";
+      ctx.fillRect(x - 4, y - 40 - pulse * 4, 8, 8);
+      ctx.fillStyle = "rgba(241, 91, 91, 0.82)";
+      ctx.fillRect(x - 22, y + 34, 44, 5);
+      ctx.fillStyle = palette.flower;
+      ctx.fillRect(x - 22, y + 34, 44 * (core.hp / core.maxHp), 5);
+    }
+  }
+
+  function drawBossRoom() {
+    const r = BOSS_ROOM;
+    const pulse = Math.sin(game.time * 2.4) * 0.5 + 0.5;
+    // darker sealed chamber floor
+    drawGridRect(r.x + r.wall, r.y + r.wall, r.w - r.wall * 2, r.h - r.wall * 2, "#1b1322", "rgba(126, 67, 110, 0.22)");
+    ctx.fillStyle = `rgba(228, 84, 154, ${0.06 + pulse * 0.06})`;
+    ctx.fillRect(r.x + r.wall, r.y + r.wall, r.w - r.wall * 2, r.h - r.wall * 2);
+    for (const wall of bossRoomWalls()) {
+      ctx.fillStyle = "#3a2d40";
+      ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
+      ctx.strokeStyle = `rgba(228, 84, 154, ${0.3 + pulse * 0.2})`;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(wall.x + 0.5, wall.y + 0.5, wall.w - 1, wall.h - 1);
+    }
+    // glowing threshold in the doorway
+    ctx.fillStyle = `rgba(228, 84, 154, ${0.3 + pulse * 0.3})`;
+    ctx.fillRect(r.x, r.doorY + 6, 6, r.doorH - 12);
+  }
+
+  function drawDataCurtain() {
+    const c = game.curtain;
+    if (c.down) {
+      ctx.fillStyle = "rgba(126, 203, 119, 0.18)";
+      ctx.fillRect(c.x, c.y, c.w, c.h);
+      ctx.fillStyle = "rgba(105, 215, 255, 0.25)";
+      ctx.fillRect(c.x + c.w / 2 - 2, c.y, 4, c.h);
+      return;
+    }
+    const flick = 0.55 + Math.sin(game.time * 18 + c.pulse) * 0.25 + (rand() - 0.5) * 0.1;
+    ctx.save();
+    ctx.fillStyle = `rgba(105, 215, 255, ${0.16 * flick})`;
+    ctx.fillRect(c.x - 4, c.y, c.w + 8, c.h);
+    ctx.strokeStyle = `rgba(180, 240, 255, ${0.7 * flick})`;
+    ctx.lineWidth = 2;
+    for (let i = 0; i <= 4; i += 1) {
+      const x = c.x + 6 + i * (c.w - 12) / 4;
+      ctx.beginPath();
+      ctx.moveTo(x, c.y + 4);
+      for (let y = c.y + 4; y < c.y + c.h - 4; y += 18) {
+        ctx.lineTo(x + (rand() - 0.5) * 10, y);
+      }
+      ctx.lineTo(x, c.y + c.h - 4);
+      ctx.stroke();
+    }
+    // horizontal arcs
+    ctx.strokeStyle = `rgba(228, 84, 154, ${0.5 * flick})`;
+    for (let y = c.y + 14; y < c.y + c.h; y += 34) {
+      ctx.beginPath();
+      ctx.moveTo(c.x + 2, y);
+      ctx.lineTo(c.x + c.w - 2, y + (rand() - 0.5) * 8);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Thick smog hanging over the data centre: a drifting haze plus heavy smoke stacks.
+  function drawSmog(d) {
+    ctx.save();
+    const haze = ctx.createLinearGradient(0, d.y - TILE * 6, 0, d.y + d.h);
+    haze.addColorStop(0, "rgba(70, 66, 60, 0.42)");
+    haze.addColorStop(0.5, "rgba(78, 74, 68, 0.26)");
+    haze.addColorStop(1, "rgba(60, 58, 54, 0.05)");
+    ctx.fillStyle = haze;
+    ctx.fillRect(d.x - TILE * 5, d.y - TILE * 6, d.w + TILE * 10, d.h + TILE * 6);
+    // a row of belching stacks along the top of the data centre
+    for (let i = 0; i < 6; i += 1) {
+      drawSmokeStack(d.x + TILE * 1.5 + i * (d.w - TILE * 3) / 5, d.y - TILE * 2, i * 0.37);
+    }
+    // extra free-floating soot puffs
+    for (let i = 0; i < 26; i += 1) {
+      const seed = i * 53.1;
+      const drift = (game.time * 0.16 + i * 0.21) % 1;
+      const px = d.x + ((seed * 97) % (d.w + TILE * 4)) - TILE * 2 + Math.sin(game.time * 0.6 + i) * 18;
+      const py = d.y - TILE * 5 + ((seed * 61) % (d.h + TILE * 4)) - drift * 120;
+      const size = 26 + (seed % 30) + drift * 26;
+      ctx.fillStyle = `rgba(64, 62, 58, ${(1 - drift) * 0.16})`;
+      ctx.fillRect(Math.round(px - size / 2), Math.round(py - size / 2), Math.round(size), Math.round(size));
+    }
     ctx.restore();
   }
 
@@ -2410,20 +3008,45 @@
       ctx.fillRect(cabin.x + 106, cabin.y + 46, 42, 54);
       ctx.fillStyle = "#d4a15b";
       ctx.fillRect(cabin.x + 116, cabin.y + 56, 22, 10);
+      if (cabin.big) {
+        // a second window hints at the extra room
+        ctx.fillStyle = "#8d6240";
+        ctx.fillRect(cabin.x + cabin.w - 70, cabin.y + 46, 42, 54);
+        ctx.fillStyle = "#d4a15b";
+        ctx.fillRect(cabin.x + cabin.w - 60, cabin.y + 56, 22, 10);
+      }
+      const iy = cabin.y + cabin.h - 78;
       ctx.fillStyle = cabin.used ? "#324b34" : "#d4a15b";
       if (cabin.item === "book") {
-        ctx.fillRect(cabin.x + 42, cabin.y + 118, 30, 22);
+        ctx.fillRect(cabin.x + 42, iy, 30, 22);
         ctx.fillStyle = "#f5eed1";
-        ctx.fillRect(cabin.x + 46, cabin.y + 122, 10, 14);
-        ctx.fillRect(cabin.x + 58, cabin.y + 122, 10, 14);
+        ctx.fillRect(cabin.x + 46, iy + 4, 10, 14);
+        ctx.fillRect(cabin.x + 58, iy + 4, 10, 14);
       } else if (cabin.item === "hat") {
-        ctx.fillRect(cabin.x + 42, cabin.y + 122, 36, 8);
-        ctx.fillRect(cabin.x + 52, cabin.y + 108, 16, 16);
+        ctx.fillRect(cabin.x + 42, iy + 4, 36, 8);
+        ctx.fillRect(cabin.x + 52, iy - 10, 16, 16);
+      } else if (cabin.item === "boots") {
+        ctx.fillRect(cabin.x + 44, iy - 4, 18, 28);
+        ctx.fillRect(cabin.x + 68, iy - 4, 18, 28);
+      } else if (cabin.item === "flashlight") {
+        // a little lamp on a stand
+        ctx.fillRect(cabin.x + 52, iy + 6, 18, 6);
+        ctx.fillStyle = cabin.used ? "#324b34" : "#ffe07a";
+        ctx.beginPath();
+        ctx.moveTo(cabin.x + 50, iy + 6);
+        ctx.lineTo(cabin.x + 72, iy + 6);
+        ctx.lineTo(cabin.x + 66, iy - 10);
+        ctx.lineTo(cabin.x + 56, iy - 10);
+        ctx.closePath();
+        ctx.fill();
       } else {
-        ctx.fillRect(cabin.x + 44, cabin.y + 114, 18, 28);
-        ctx.fillRect(cabin.x + 68, cabin.y + 114, 18, 28);
+        // empty home: just a little stool
+        ctx.fillStyle = "#5c4631";
+        ctx.fillRect(cabin.x + 48, iy + 6, 22, 8);
+        ctx.fillRect(cabin.x + 50, iy + 14, 5, 12);
+        ctx.fillRect(cabin.x + 63, iy + 14, 5, 12);
       }
-      if (Math.abs(game.player.x - (cabin.x + cabin.w / 2)) < 110 && Math.abs(game.player.y - (cabin.y + cabin.h / 2)) < 110) {
+      if (Math.abs(game.player.x - (cabin.x + cabin.w / 2)) < 110 && Math.abs(game.player.y - (cabin.y + cabin.h / 2)) < 130) {
         drawWorldHint(cabin.x + cabin.w / 2, cabin.y - 12, "SPACJA");
       }
     }
@@ -2468,23 +3091,40 @@
 
   function drawSecurityCameras() {
     for (const server of game.servers) {
-      if (server.destroyed || !server.powered) continue;
-      for (const camera of serverCameras(server)) drawCamera(camera);
+      if (server.destroyed) continue;
+      for (const camera of serverCameras(server)) drawCamera(camera, server.powered);
+    }
+    if (!game.worldRestored && !game.boss.defeated) {
+      for (const camera of dataCenterCameras()) drawCamera(camera, !game.dataFeedCut);
     }
   }
 
-  function drawCamera(camera) {
+  // Wall cameras: a clear housing dot, a red lens that blinks while the underground feed is live.
+  function drawCamera(camera, powered) {
     ctx.save();
-    ctx.fillStyle = "rgba(228, 84, 154, 0.08)";
-    ctx.beginPath();
-    ctx.moveTo(camera.x, camera.y);
-    ctx.arc(camera.x, camera.y, camera.range, camera.a - camera.spread, camera.a + camera.spread);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = "#273036";
-    ctx.fillRect(camera.x - 10, camera.y - 10, 20, 20);
-    ctx.fillStyle = palette.aiPink;
-    ctx.fillRect(camera.x - 4, camera.y - 4, 8, 8);
+    if (powered) {
+      ctx.fillStyle = "rgba(228, 84, 154, 0.08)";
+      ctx.beginPath();
+      ctx.moveTo(camera.x, camera.y);
+      ctx.arc(camera.x, camera.y, camera.range, camera.a - camera.spread, camera.a + camera.spread);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.fillStyle = "#1b2227";
+    ctx.fillRect(camera.x - 8, camera.y - 8, 16, 16);
+    ctx.strokeStyle = "rgba(245, 238, 209, 0.18)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(camera.x - 8.5, camera.y - 8.5, 16, 16);
+    if (powered) {
+      const blink = 0.55 + Math.sin(game.time * 6 + camera.x * 0.05) * 0.45;
+      ctx.fillStyle = `rgba(241, 91, 91, ${0.45 + blink * 0.55})`;
+      ctx.fillRect(camera.x - 4, camera.y - 4, 8, 8);
+      ctx.fillStyle = `rgba(255, 214, 140, ${blink})`;
+      ctx.fillRect(camera.x - 1, camera.y - 1, 2, 2);
+    } else {
+      ctx.fillStyle = "rgba(120, 130, 130, 0.55)";
+      ctx.fillRect(camera.x - 4, camera.y - 4, 8, 8);
+    }
     ctx.restore();
   }
 
@@ -2505,8 +3145,59 @@
       ctx.strokeStyle = "rgba(17, 10, 6, 0.62)";
       ctx.strokeRect(rect.x + 0.5, rect.y + 0.5, rect.w - 1, rect.h - 1);
     }
+    drawOasis();
     drawUndergroundBurrows();
     drawCables();
+  }
+
+  // A calm underground oasis: a glowing pool ringed with mushrooms and pale plants.
+  function drawOasis() {
+    const o = UNDER_OASIS;
+    const t = game.time;
+    // mossy floor accent
+    ctx.fillStyle = "#2c3a2b";
+    ctx.fillRect(o.x + 8, o.y + 8, o.w - 16, o.h - 16);
+    // the pool
+    const px = o.x + o.w * 0.5;
+    const py = o.y + o.h * 0.56;
+    const pw = o.w * 0.42;
+    const ph = o.h * 0.32;
+    ctx.save();
+    ctx.fillStyle = "#1f4f63";
+    ctx.beginPath();
+    ctx.ellipse(px, py, pw, ph, 0, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = "rgba(105, 215, 255, 0.22)";
+    ctx.beginPath();
+    ctx.ellipse(px, py, pw * 0.7, ph * 0.66, 0, 0, TAU);
+    ctx.fill();
+    for (let i = 0; i < 3; i += 1) {
+      ctx.strokeStyle = `rgba(180, 240, 255, ${0.16 - i * 0.04})`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.ellipse(px, py, pw * (0.4 + ((t * 0.2 + i * 0.33) % 1) * 0.6), ph * (0.4 + ((t * 0.2 + i * 0.33) % 1) * 0.6), 0, 0, TAU);
+      ctx.stroke();
+    }
+    ctx.restore();
+    // glowing mushrooms / plants around the rim
+    for (let i = 0; i < 12; i += 1) {
+      const a = i * TAU / 12;
+      const mx = px + Math.cos(a) * (pw + 26);
+      const my = py + Math.sin(a) * (ph + 22);
+      if (!pointInRect(mx, my, o, -10)) continue;
+      const glow = 0.5 + Math.sin(t * 2 + i) * 0.5;
+      ctx.fillStyle = "#6b5a44";
+      ctx.fillRect(Math.round(mx - 2), Math.round(my - 2), 4, 12);
+      ctx.fillStyle = `rgba(126, 203, 119, ${0.5 + glow * 0.4})`;
+      ctx.beginPath();
+      ctx.arc(Math.round(mx), Math.round(my - 4), 6, 0, TAU);
+      ctx.fill();
+    }
+    ctx.fillStyle = "rgba(126, 203, 119, 0.8)";
+    ctx.font = "800 13px Inter, system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("PODZIEMNA OAZA", px, o.y + 26);
+    ctx.textAlign = "left";
   }
 
   function drawUndergroundBurrows() {
@@ -2519,15 +3210,25 @@
   function drawCables() {
     for (const cable of game.cables) {
       cable.pulse += 0.03;
+      const cx = cable.x + cable.w / 2;
+      // the top end is bedded into the rock ceiling so it never just dangles in mid-air
+      ctx.fillStyle = "#241a14";
+      ctx.fillRect(cable.x - 6, cable.y - 10, cable.w + 12, 16);
       ctx.fillStyle = cable.cut ? "#2c2520" : "#421f2c";
       ctx.fillRect(cable.x, cable.y, cable.w, cable.h);
       ctx.fillStyle = cable.cut ? "#7f6a57" : `rgba(105, 215, 255, ${0.25 + Math.sin(game.time * 4 + cable.pulse) * 0.12})`;
-      if (cable.w > cable.h) {
-        ctx.fillRect(cable.x, cable.y + cable.h / 2 - 3, cable.w, 6);
+      ctx.fillRect(cx - 3, cable.y, 6, cable.h);
+      // frayed/sparking exposed lower end
+      const endY = cable.y + cable.h;
+      if (cable.cut) {
+        ctx.fillStyle = "#7f6a57";
+        ctx.fillRect(cx - 5, endY - 6, 3, 8);
+        ctx.fillRect(cx + 2, endY - 6, 3, 8);
       } else {
-        ctx.fillRect(cable.x + cable.w / 2 - 3, cable.y, 6, cable.h);
+        ctx.fillStyle = `rgba(228, 84, 154, ${0.4 + Math.sin(game.time * 9 + cable.pulse) * 0.3})`;
+        ctx.fillRect(cx - 4, endY - 4, 8, 8);
+        drawWorldHint(cx, endY + 16, "GRYZ");
       }
-      if (!cable.cut) drawWorldHint(cable.x + cable.w / 2, cable.y - 12, "GRYZ");
     }
   }
 
@@ -2569,16 +3270,41 @@
   function drawUndergroundFog(size) {
     const px = game.player.x - camera.x;
     const py = game.player.y - camera.y;
-    const g = ctx.createRadialGradient(px, py, 90, px, py, 285);
+    // the tail flashlight widens how far you can see in the dark
+    const lit = game.player.tailLight;
+    const inner = lit ? 170 : 90;
+    const outer = lit ? 470 : 285;
+    const g = ctx.createRadialGradient(px, py, inner, px, py, outer);
     g.addColorStop(0, "rgba(0,0,0,0)");
-    g.addColorStop(0.55, "rgba(0,0,0,0.28)");
+    g.addColorStop(0.55, lit ? "rgba(0,0,0,0.2)" : "rgba(0,0,0,0.28)");
     g.addColorStop(1, "rgba(0,0,0,0.92)");
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, size.w, size.h);
   }
 
+  function drawIntel() {
+    for (const spot of game.intel) {
+      if (spot.taken) continue;
+      const x = Math.round(spot.x);
+      const y = Math.round(spot.y + Math.sin(game.time * 2 + spot.x) * 2);
+      const glow = 0.5 + Math.sin(game.time * 4 + spot.x) * 0.5;
+      ctx.fillStyle = "#1c2a30";
+      ctx.fillRect(x - 12, y - 10, 24, 20);
+      ctx.fillStyle = `rgba(159, 231, 255, ${0.5 + glow * 0.4})`;
+      ctx.fillRect(x - 8, y - 6, 16, 12);
+      ctx.fillStyle = "#0c1418";
+      for (let i = -6; i <= 6; i += 4) ctx.fillRect(x + i, y - 14, 2, 5);
+      ctx.fillStyle = palette.cream;
+      ctx.font = "700 9px Inter, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("INTEL", x, y + 24);
+      ctx.textAlign = "left";
+      if (Math.hypot(game.player.x - spot.x, game.player.y - spot.y) < 60) drawWorldHint(x, y - 26, "ZBIERZ");
+    }
+  }
+
   function drawForestWalls() {
-    for (const wall of FOREST_WALL_RECTS) {
+    for (const wall of TERRAIN_SOLIDS) {
       const startX = Math.floor(wall.x / TILE) * TILE;
       const startY = Math.floor(wall.y / TILE) * TILE;
       const endX = wall.x + wall.w;
@@ -2777,7 +3503,7 @@
     for (const plank of game.planks) {
       if (plank.taken) continue;
       if (plank.bridgeStreamIndex !== null && plank.bridgeStreamIndex !== undefined) drawBridgePlank(plank);
-      else drawPlank(plank.x, plank.y + Math.sin(plank.bob) * 3, plank.angle, 1);
+      else drawPlank(plank.x, plank.y, plank.angle, 1);
     }
   }
 
@@ -2824,12 +3550,158 @@
   function drawPickups() {
     for (const pickup of game.pickups) {
       if (pickup.taken) continue;
-      const y = pickup.y + Math.sin(pickup.bob) * 5;
+      // flowers and nuts stay put; only the special floating items bob
+      const bobbing = pickup.type === "spinach" || pickup.type === "elixir" || pickup.type === "stick" || pickup.type === "heart";
+      const y = bobbing ? pickup.y + Math.sin(pickup.bob) * 5 : pickup.y;
       shadow(pickup.x, pickup.y + 15, pickup.type === "nut" ? 18 : 24, 7);
       if (pickup.type === "flower") drawFlowerPickup(pickup.x, y, pickup.species, 1.05);
-      else if (pickup.type === "nut") drawNut(pickup.x, y, 1, pickup.bob * 0.2);
+      else if (pickup.type === "nut") drawNut(pickup.x, y, 1, 0);
       else if (pickup.type === "elixir") drawElixir(pickup.x, y, 1);
+      else if (pickup.type === "stick") drawStickPickup(pickup.x, y, 1);
+      else if (pickup.type === "heart") drawHeartPickup(pickup.x, y, 1);
       else drawSpinach(pickup.x, y, 1);
+    }
+  }
+
+  function drawStickPickup(x, y, scale) {
+    ctx.save();
+    ctx.translate(Math.round(x), Math.round(y));
+    ctx.scale(scale, scale);
+    ctx.rotate(-0.5);
+    ctx.fillStyle = palette.plank;
+    ctx.fillRect(-30, -4, 60, 8);
+    ctx.fillStyle = "#8a5a33";
+    ctx.fillRect(-30, -4, 10, 8);
+    ctx.fillStyle = "#5fbf62";
+    ctx.fillRect(24, -8, 8, 8);
+    ctx.restore();
+  }
+
+  function drawHeartPickup(x, y, scale) {
+    ctx.save();
+    ctx.translate(Math.round(x), Math.round(y));
+    ctx.scale(scale, scale);
+    ctx.fillStyle = palette.red;
+    ctx.beginPath();
+    ctx.moveTo(0, 12);
+    ctx.bezierCurveTo(-18, -3, -11, -19, 0, -10);
+    ctx.bezierCurveTo(11, -19, 18, -3, 0, 12);
+    ctx.fill();
+    ctx.fillStyle = "rgba(126, 203, 119, 0.7)";
+    ctx.fillRect(-3, -22, 6, 8);
+    ctx.restore();
+  }
+
+  function drawGems() {
+    for (const gem of game.gems) {
+      if (gem.taken) continue;
+      const y = gem.y + Math.sin(gem.pulse) * 4;
+      shadow(gem.x, gem.y + 14, 20, 6);
+      drawGemShape(gem.x, y, gem.color, 1);
+      if (Math.hypot(game.player.x - gem.x, game.player.y - gem.y) < 70) drawWorldHint(gem.x, gem.y - 26, "ZBIERZ");
+    }
+  }
+
+  function drawGemShape(x, y, color, scale) {
+    ctx.save();
+    ctx.translate(Math.round(x), Math.round(y));
+    ctx.scale(scale, scale);
+    const glow = 0.5 + Math.sin(game.time * 4 + x) * 0.5;
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(0, -14);
+    ctx.lineTo(12, -3);
+    ctx.lineTo(7, 14);
+    ctx.lineTo(-7, 14);
+    ctx.lineTo(-12, -3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 0.4 + glow * 0.4;
+    ctx.fillStyle = "rgba(255,255,255,0.7)";
+    ctx.beginPath();
+    ctx.moveTo(0, -14);
+    ctx.lineTo(5, -3);
+    ctx.lineTo(-2, 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  function drawCritters() {
+    if (game.worldRestored) return;
+    for (const critter of game.critters) {
+      drawCritter(critter);
+      if (critter.near) drawWorldHint(critter.x, critter.y - 26, game.player.nuts > 0 ? "L NAKARM" : "BRAK ORZESZKA");
+    }
+  }
+
+  function drawCritter(critter) {
+    const x = Math.round(critter.x);
+    const y = Math.round(critter.y + Math.sin(critter.phase) * 1.5);
+    const r = critter.r;
+    shadow(x, y + r * 0.8, r * 1.1, r * 0.3);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(Math.cos(critter.dir) < 0 ? -1 : 1, 1);
+    if (critter.type === "rabbit") {
+      ctx.fillStyle = "#c9b48f";
+      ctx.fillRect(-r, -r * 0.3, r * 1.5, r * 0.9);
+      ctx.fillRect(r * 0.3, -r * 0.8, r * 0.7, r * 0.7);
+      ctx.fillRect(r * 0.5, -r * 1.7, 5, 18);
+      ctx.fillRect(r * 0.8, -r * 1.65, 5, 18);
+    } else if (critter.type === "hedgehog") {
+      ctx.fillStyle = "#6e5a44";
+      ctx.fillRect(-r, -r * 0.5, r * 1.8, r);
+      ctx.fillStyle = "#3f3326";
+      for (let i = -r; i < r; i += 5) ctx.fillRect(i, -r * 0.8, 3, 10);
+      ctx.fillStyle = "#d9c3a0";
+      ctx.fillRect(r * 0.6, -r * 0.2, r * 0.5, r * 0.6);
+    } else if (critter.type === "fawn") {
+      ctx.fillStyle = "#b07d46";
+      ctx.fillRect(-r, -r * 0.3, r * 1.7, r * 0.85);
+      ctx.fillRect(r * 0.4, -r * 0.8, r * 0.7, r * 0.65);
+      ctx.fillStyle = "#f0e2c4";
+      ctx.fillRect(-r * 0.4, -r * 0.1, 4, 4);
+      ctx.fillRect(0, r * 0.1, 4, 4);
+      ctx.fillStyle = "#7a5530";
+      ctx.fillRect(-r * 0.6, r * 0.4, 5, 16);
+      ctx.fillRect(r * 0.2, r * 0.4, 5, 16);
+    } else {
+      // healthy squirrel
+      ctx.fillStyle = "#c77b3f";
+      ctx.beginPath();
+      ctx.arc(-r * 0.95, -r * 0.45, r * 0.7, 0, TAU);
+      ctx.fill();
+      ctx.fillRect(-r * 0.6, -r * 0.36, r * 1.1, r * 0.9);
+      ctx.fillRect(r * 0.22, -r * 0.72, r * 0.7, r * 0.7);
+    }
+    ctx.fillStyle = "#1d1714";
+    ctx.fillRect(r * 0.6, -r * 0.45, 4, 4);
+    ctx.restore();
+  }
+
+  function drawMiniDams() {
+    for (const dam of MINI_DAMS) {
+      const x = dam.x;
+      const y = dam.y;
+      shadow(x, y + 8, 38, 9);
+      // a heaped pile of gnawed sticks
+      ctx.save();
+      for (let i = 0; i < 9; i += 1) {
+        const a = (i * 1.7) % TAU;
+        const len = 26 + (i % 3) * 8;
+        ctx.strokeStyle = i % 2 ? "#8a5a33" : "#b77b43";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(x - 24 + i * 5, y + 8 - (i % 3) * 4);
+        ctx.lineTo(x - 24 + i * 5 + Math.cos(a) * len, y + 8 - (i % 3) * 4 - Math.abs(Math.sin(a)) * 12);
+        ctx.stroke();
+      }
+      ctx.fillStyle = "rgba(105, 215, 255, 0.16)";
+      ctx.fillRect(x - 30, y + 12, 60, 6);
+      ctx.restore();
     }
   }
 
@@ -3140,13 +4012,13 @@
     ctx.restore();
   }
 
-  function drawRack(x, y, pulse, tall = true) {
+  function drawRack(x, y, pulse, tall = true, color = palette.aiBlue) {
     const h = tall ? TILE * 2 : TILE;
     ctx.fillStyle = "#10171c";
     ctx.fillRect(x, y, TILE, h);
     ctx.fillStyle = "#222b30";
     ctx.fillRect(x + 8, y + 8, TILE - 16, h - 16);
-    ctx.fillStyle = palette.aiBlue;
+    ctx.fillStyle = color;
     ctx.globalAlpha = 0.36 + pulse * 0.34;
     for (let yy = y + 18; yy < y + h - 10; yy += 22) {
       ctx.fillRect(x + 14, yy, 12, 6);
@@ -3155,9 +4027,53 @@
     ctx.globalAlpha = 1;
   }
 
+  const SERVER_ACCENTS = ["#7ed957", "#ffb347", "#56d6c8", "#6a7bff", "#b06aff"];
+
+  function drawComputerCore(server, core, pulse, accent) {
+    if (core.destroyed) {
+      const x = core.x - TILE, y = core.y - TILE;
+      ctx.fillStyle = palette.bark;
+      ctx.fillRect(core.x - 10, core.y, 20, 60);
+      ctx.fillStyle = "#235c35";
+      ctx.fillRect(x + 14, core.y - 36, 92, 60);
+      drawTinyFlower({ x: core.x, y: core.y + 40, phase: core.pulse }, true);
+      return;
+    }
+    const x = core.x - TILE;
+    const y = core.y - TILE;
+    ctx.fillStyle = core.hp / core.maxHp > 0.35 ? "#2c3137" : "#46343b";
+    ctx.fillRect(x, y, TILE * 2, TILE * 2);
+    ctx.fillStyle = "#0b1014";
+    ctx.fillRect(x + 14, y + 18, TILE * 2 - 28, 18);
+    ctx.fillRect(x + 14, y + 55, TILE * 2 - 28, 18);
+    ctx.fillRect(x + 14, y + 91, TILE * 2 - 28, 16);
+    ctx.fillStyle = accent;
+    ctx.globalAlpha = 0.45 + pulse * 0.35;
+    for (let i = 0; i < 8; i += 1) {
+      ctx.fillRect(x + 18 + i * 11, y + 24, 5, 8);
+      ctx.fillRect(x + 18 + i * 11, y + 61, 5, 8);
+    }
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = server.powered ? `rgba(228, 84, 154, ${0.42 + pulse * 0.35})` : "rgba(126, 203, 119, 0.6)";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(x + 0.5, y + 0.5, TILE * 2 - 1, TILE * 2 - 1);
+    if (!server.powered) {
+      ctx.fillStyle = "rgba(126, 203, 119, 0.82)";
+      ctx.font = "900 12px Inter, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("OFF", core.x, core.y + 4);
+      ctx.textAlign = "left";
+    }
+    ctx.fillStyle = "rgba(241, 91, 91, 0.82)";
+    ctx.fillRect(x, y + TILE * 2 + 8, TILE * 2, 7);
+    ctx.fillStyle = palette.leafLight;
+    ctx.fillRect(x, y + TILE * 2 + 8, TILE * 2 * (core.hp / core.maxHp), 7);
+  }
+
   function drawServer(server) {
     const b = roomBounds(server);
     const pulse = Math.sin(game.time * 3 + server.pulse) * 0.5 + 0.5;
+    const accent = SERVER_ACCENTS[server.num - 1] || palette.aiBlue;
     shadow(server.x, server.y + server.h * 0.46, server.w * 0.54, 20);
 
     ctx.save();
@@ -3180,61 +4096,40 @@
     ctx.lineWidth = 1;
     for (const wall of roomWalls(server)) ctx.strokeRect(wall.x + 0.5, wall.y + 0.5, wall.w - 1, wall.h - 1);
 
-    const doorX = server.x - server.door / 2;
+    const dr = doorRect(server);
     ctx.fillStyle = "#6d5941";
-    ctx.fillRect(doorX, b.y + b.h - server.wall, server.door, server.wall);
+    ctx.fillRect(dr.x, dr.y, dr.w, dr.h);
     ctx.fillStyle = "rgba(245, 238, 209, 0.14)";
-    ctx.fillRect(doorX, b.y + b.h - server.wall + 8, server.door, 8);
+    ctx.fillRect(dr.x + 6, dr.y + 6, dr.w - 12, dr.h - 12);
 
-    const coreX = b.x + (server.tilesW / 2 - 1) * TILE;
-    const coreY = b.y + (server.tilesH / 2 - 1) * TILE;
-    const rackColumns = [];
-    for (let x = b.x + TILE * 2; x < b.x + b.w - TILE * 2; x += TILE * 2) rackColumns.push(x);
-    for (const rackX of rackColumns) {
+    // racks fill the room, skipping each computer core's footprint
+    const coreRects = server.cores.map((c) => ({ x: c.x - TILE - 8, y: c.y - TILE - 8, w: TILE * 2 + 16, h: TILE * 2 + 16 }));
+    for (let x = b.x + TILE * 2; x < b.x + b.w - TILE * 2; x += TILE * 2) {
       for (let y = b.y + TILE; y < b.y + b.h - TILE * 2; y += TILE * 2) {
-        if (rectsOverlap({ x: rackX, y, w: TILE, h: TILE * 2 }, { x: coreX - TILE, y: coreY - TILE, w: TILE * 4, h: TILE * 4 })) continue;
-        drawRack(rackX, y, pulse, true);
+        const rk = { x, y, w: TILE, h: TILE * 2 };
+        if (coreRects.some((cr) => rectsOverlap(rk, cr))) continue;
+        if (server.partition && rectsOverlap(rk, { x: b.x + TILE * 2, y: b.y + server.wall, w: TILE, h: Math.floor(server.tilesH * 0.45) * TILE })) continue;
+        drawRack(x, y, pulse, true, accent);
       }
     }
 
-    ctx.fillStyle = server.hp / server.maxHp > 0.35 ? "#2c3137" : "#46343b";
-    ctx.fillRect(coreX, coreY, TILE * 2, TILE * 2);
-    ctx.fillStyle = "#0b1014";
-    ctx.fillRect(coreX + 14, coreY + 18, TILE * 2 - 28, 18);
-    ctx.fillRect(coreX + 14, coreY + 55, TILE * 2 - 28, 18);
-    ctx.fillRect(coreX + 14, coreY + 91, TILE * 2 - 28, 16);
+    for (const core of server.cores) drawComputerCore(server, core, pulse, accent);
 
-    ctx.fillStyle = palette.aiBlue;
-    ctx.globalAlpha = 0.45 + pulse * 0.35;
-    for (let i = 0; i < 8; i += 1) {
-      ctx.fillRect(coreX + 18 + i * 11, coreY + 24, 5, 8);
-      ctx.fillRect(coreX + 18 + i * 11, coreY + 61, 5, 8);
-    }
-    ctx.globalAlpha = 1;
-
-    ctx.strokeStyle = server.powered ? `rgba(228, 84, 154, ${0.42 + pulse * 0.35})` : "rgba(126, 203, 119, 0.6)";
-    ctx.lineWidth = 4;
-    ctx.strokeRect(coreX + 0.5, coreY + 0.5, TILE * 2 - 1, TILE * 2 - 1);
-    if (!server.powered) {
-      ctx.fillStyle = "rgba(126, 203, 119, 0.82)";
-      ctx.font = "900 12px Inter, system-ui, sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText("OFF", coreX + TILE, coreY + TILE + 4);
-      ctx.textAlign = "left";
-    }
-
-    ctx.fillStyle = "rgba(241, 91, 91, 0.82)";
-    const hp = server.hp / server.maxHp;
-    ctx.fillRect(coreX, coreY + TILE * 2 + 12, TILE * 2, 8);
-    ctx.fillStyle = palette.leafLight;
-    ctx.fillRect(coreX, coreY + TILE * 2 + 12, TILE * 2 * hp, 8);
+    // floating number tag so the room is easy to identify (matches the underground labels)
+    ctx.fillStyle = "rgba(13, 18, 16, 0.7)";
+    ctx.fillRect(server.x - 16, b.y - 26, 32, 20);
+    ctx.fillStyle = accent;
+    ctx.font = "900 14px Inter, system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("#" + server.num, server.x, b.y - 15);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
     ctx.restore();
   }
 
   function drawServerRuin(server) {
     const b = roomBounds(server);
-    const coreX = b.x + (server.tilesW / 2 - 1) * TILE;
-    const coreY = b.y + (server.tilesH / 2 - 1) * TILE;
     shadow(server.x, server.y + server.h * 0.46, server.w * 0.5, 16);
     if (game.worldRestored) {
       drawNaturalServerMeadow(server, b);
@@ -3256,11 +4151,14 @@
     ctx.fillStyle = "#426f45";
     for (const wall of roomWalls(server)) ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
 
-    ctx.fillStyle = palette.bark;
-    ctx.fillRect(coreX + 52, coreY + 42, 24, 86);
-    ctx.fillStyle = "#235c35";
-    ctx.fillRect(coreX + 22, coreY - 8, 84, 58);
-    ctx.fillRect(coreX + 36, coreY - 42, 56, 42);
+    // a young tree sprouts where each computer once stood
+    for (const core of server.cores) {
+      ctx.fillStyle = palette.bark;
+      ctx.fillRect(core.x - 12, core.y - 6, 24, 78);
+      ctx.fillStyle = "#235c35";
+      ctx.fillRect(core.x - 42, core.y - 50, 84, 58);
+      ctx.fillRect(core.x - 28, core.y - 84, 56, 42);
+    }
     ctx.fillStyle = palette.leafLight;
     for (let i = 0; i < 10; i += 1) {
       const x = b.x + TILE + i * TILE;
@@ -3324,7 +4222,13 @@
   }
 
   function drawFollowers() {
-    for (const follower of followers) drawAnimal(follower, true);
+    for (const follower of followers) {
+      if (follower.type === "rabbit" || follower.type === "hedgehog" || follower.type === "fawn") {
+        drawCritter({ type: follower.type, x: follower.x, y: follower.y, r: follower.r, phase: follower.phase, dir: 0 });
+      } else {
+        drawAnimal(follower, true);
+      }
+    }
   }
 
   function drawDolphins() {
@@ -3340,22 +4244,30 @@
     const baseY = dolphin.y + Math.sin(dolphin.dir) * travel;
     const x = Math.round(baseX);
     const y = Math.round(baseY - jump * 58);
+    const gold = dolphin.golden;
+    const body = gold ? "#e8b84b" : "#6aaec4";
+    const belly = gold ? "#f6e3a3" : "#bfe8ef";
+    const fin = gold ? "#c79530" : "#5f9eb4";
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(Math.sin(progress * Math.PI * 2) * 0.18);
     ctx.scale(Math.cos(dolphin.dir) < 0 || Math.sin(dolphin.dir) < -0.5 ? -1 : 1, 1);
-    ctx.fillStyle = "rgba(105, 215, 255, 0.34)";
+    if (gold) {
+      ctx.shadowBlur = 16;
+      ctx.shadowColor = "rgba(255, 214, 120, 0.8)";
+    }
+    ctx.fillStyle = gold ? "rgba(255, 214, 120, 0.3)" : "rgba(105, 215, 255, 0.34)";
     ctx.fillRect(Math.round(-34 - travel * 0.02), Math.round(jump * 50), 68, 6);
     ctx.fillRect(-18, Math.round(jump * 50 + 10), 36, 4);
-    ctx.fillStyle = "#6aaec4";
+    ctx.fillStyle = body;
     ctx.beginPath();
     ctx.ellipse(0, 0, 36, 14, -0.08, 0, TAU);
     ctx.fill();
-    ctx.fillStyle = "#bfe8ef";
+    ctx.fillStyle = belly;
     ctx.beginPath();
     ctx.ellipse(8, 7, 23, 6, -0.05, 0, TAU);
     ctx.fill();
-    ctx.fillStyle = "#5f9eb4";
+    ctx.fillStyle = fin;
     ctx.beginPath();
     ctx.moveTo(-12, -10);
     ctx.lineTo(3, -28);
@@ -3384,7 +4296,7 @@
       return;
     }
 
-    const exposed = coresLeftCount() === 0;
+    const exposed = bossCoresLeftCount() === 0;
     const pulse = Math.sin(game.time * 4 + boss.pulse) * 0.5 + 0.5;
     shadow(boss.x, boss.y + 42, 132, 46);
 
@@ -3658,6 +4570,17 @@
       ctx.fillRect(4, 25, 12, 5);
     }
 
+    if (p.swimming) {
+      // half-submerged: water hides the lower body, with a rippling surface line
+      const wob = Math.sin(game.time * 4) * 2;
+      ctx.fillStyle = "rgba(49, 93, 115, 0.78)";
+      ctx.fillRect(-20, 2 + wob, 40, 24);
+      ctx.fillStyle = "rgba(105, 215, 255, 0.5)";
+      ctx.fillRect(-22, 1 + wob, 44, 3);
+      ctx.fillRect(-16, 7 + wob, 12, 2);
+      ctx.fillRect(6, 5 + wob, 12, 2);
+    }
+
     if (p.heldPlank) {
       drawPlank(Math.cos(p.facing + 0.7) * 23, Math.sin(p.facing + 0.7) * 23, p.facing + 0.08, 0.85);
     }
@@ -3704,14 +4627,20 @@
     meter(310, 58, 104, 8, clamp(p.tailLevel / 12, 0, 1), palette.beaver);
 
     ctx.fillStyle = palette.cream;
-    ctx.fillText(game.area === "underground" ? "PODZIEMIA" : "DZIEN " + game.days, 34, 68);
-    ctx.fillText("RDZENIE", 142, 68);
+    ctx.fillText(game.area === "underground" ? "PODZIEMIA" : "LAS", 34, 68);
+    ctx.fillText("SERWERY", 110, 68);
     for (let i = 0; i < game.servers.length; i += 1) {
       const s = game.servers[i];
       ctx.fillStyle = s.destroyed ? palette.leafLight : palette.aiPink;
       ctx.beginPath();
-      ctx.roundRect(207 + i * 23, 61, 15, 15, 4);
+      ctx.roundRect(178 + i * 22, 61, 15, 15, 4);
       ctx.fill();
+      ctx.fillStyle = "rgba(13, 18, 16, 0.85)";
+      ctx.font = "800 9px Inter, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(String(s.num), 178 + i * 22 + 7.5, 69);
+      ctx.textAlign = "left";
+      ctx.font = "700 13px Inter, system-ui, sans-serif";
     }
 
     const rightW = p.tailLevel > 0 || p.shield > 0 || p.heldPlank || p.nuts > 0 || audioMuted ? 236 : 118;
@@ -3738,10 +4667,157 @@
     }
     if (p.shield > 0) {
       drawSpinach(size.w - 58, size.h - 42, 0.72);
-      meter(size.w - 148, size.h - 55, 82, 9, p.shield / 14, palette.spinach);
+      ctx.font = "800 11px Inter, system-ui, sans-serif";
+      ctx.fillStyle = "rgba(78, 208, 109, 0.9)";
+      ctx.textAlign = "right";
+      ctx.fillText("TARCZA", size.w - 78, size.h - 42);
+      ctx.textAlign = "left";
     }
 
+    // backpack indicator + open hint
+    ctx.font = "800 12px Inter, system-ui, sans-serif";
+    ctx.fillStyle = "rgba(245, 238, 209, 0.78)";
+    ctx.fillText("PLECAK [I] " + game.items.length, size.w / 2 - 40, size.h - 24);
+
     ctx.restore();
+  }
+
+  function drawItemIcon(x, y, it) {
+    ctx.save();
+    if (it.id === "gem") {
+      drawGemShape(x, y, it.color, 0.9);
+    } else if (it.id === "book") {
+      ctx.fillStyle = "#7a4b2c";
+      ctx.fillRect(x - 12, y - 9, 24, 18);
+      ctx.fillStyle = "#f5eed1";
+      ctx.fillRect(x - 8, y - 6, 7, 12);
+      ctx.fillRect(x + 1, y - 6, 7, 12);
+    } else if (it.id === "hat") {
+      ctx.fillStyle = "#34463d";
+      ctx.fillRect(x - 14, y + 4, 28, 6);
+      ctx.fillRect(x - 7, y - 10, 14, 14);
+    } else if (it.id === "boots") {
+      ctx.fillStyle = "#3a3a2c";
+      ctx.fillRect(x - 12, y - 8, 10, 18);
+      ctx.fillRect(x - 12, y + 6, 18, 6);
+      ctx.fillRect(x + 2, y - 8, 10, 18);
+      ctx.fillRect(x + 2, y + 6, 16, 6);
+    } else if (it.id === "stick") {
+      ctx.strokeStyle = palette.plank;
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(x - 14, y + 8);
+      ctx.lineTo(x + 14, y - 8);
+      ctx.stroke();
+    } else if (it.id === "flashlight") {
+      ctx.fillStyle = "#2a2a2a";
+      ctx.fillRect(x - 12, y - 6, 14, 12);
+      ctx.fillStyle = "#ffe07a";
+      ctx.beginPath();
+      ctx.moveTo(x + 2, y - 8);
+      ctx.lineTo(x + 16, y - 12);
+      ctx.lineTo(x + 16, y + 12);
+      ctx.lineTo(x + 2, y + 8);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      // intel chip
+      ctx.fillStyle = "#1c2a30";
+      ctx.fillRect(x - 12, y - 9, 24, 18);
+      ctx.fillStyle = "#9fe7ff";
+      ctx.fillRect(x - 8, y - 5, 16, 10);
+      ctx.fillStyle = "#0c1418";
+      for (let i = -8; i <= 8; i += 4) ctx.fillRect(x + i, y - 13, 2, 4);
+    }
+    ctx.restore();
+  }
+
+  function drawInventory(size) {
+    invButtons.length = 0;
+    ctx.save();
+    ctx.fillStyle = "rgba(6, 9, 8, 0.84)";
+    ctx.fillRect(0, 0, size.w, size.h);
+    const panelW = Math.min(700, size.w - 60);
+    const panelX = size.w / 2 - panelW / 2;
+    const panelY = 64;
+    const panelH = Math.min(size.h - 128, 120 + game.items.length * 64 + 40);
+    ctx.fillStyle = "rgba(13, 18, 16, 0.92)";
+    ctx.fillRect(panelX, panelY, panelW, panelH);
+    ctx.strokeStyle = "rgba(245, 238, 209, 0.22)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(panelX + 0.5, panelY + 0.5, panelW - 1, panelH - 1);
+
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = palette.cream;
+    ctx.font = "900 24px Inter, system-ui, sans-serif";
+    ctx.fillText("PLECAK", panelX + 24, panelY + 40);
+    ctx.font = "700 12px Inter, system-ui, sans-serif";
+    ctx.fillStyle = "rgba(245, 238, 209, 0.6)";
+    ctx.fillText("[I] lub [ESC] zamyka   •   klik [X] wyrzuca przedmiot", panelX + 132, panelY + 40);
+
+    if (!game.items.length) {
+      ctx.fillStyle = "rgba(245, 238, 209, 0.6)";
+      ctx.font = "700 15px Inter, system-ui, sans-serif";
+      ctx.fillText("Plecak jest pusty. Zagladaj do chatek, nor i zdobytych serwerowni.", panelX + 24, panelY + 92);
+      ctx.restore();
+      return;
+    }
+
+    let y = panelY + 62;
+    const rowH = 62;
+    for (let i = 0; i < game.items.length; i += 1) {
+      const it = game.items[i];
+      ctx.fillStyle = "rgba(245, 238, 209, 0.05)";
+      ctx.fillRect(panelX + 14, y, panelW - 28, rowH - 8);
+      drawItemIcon(panelX + 44, y + 26, it);
+      ctx.fillStyle = it.color || palette.cream;
+      ctx.font = "800 15px Inter, system-ui, sans-serif";
+      ctx.fillText(it.label, panelX + 78, y + 20);
+      ctx.fillStyle = "rgba(245, 238, 209, 0.82)";
+      ctx.font = "600 12px Inter, system-ui, sans-serif";
+      let dy = y + 38;
+      for (const line of wrapText(it.desc, panelW - 200).slice(0, 2)) {
+        ctx.fillText(line, panelX + 78, dy);
+        dy += 15;
+      }
+      const bx = panelX + panelW - 46;
+      const by = y + 12;
+      ctx.fillStyle = "rgba(241, 91, 91, 0.22)";
+      ctx.fillRect(bx, by, 28, 28);
+      ctx.strokeStyle = "rgba(241, 91, 91, 0.85)";
+      ctx.strokeRect(bx + 0.5, by + 0.5, 27, 27);
+      ctx.fillStyle = palette.cream;
+      ctx.font = "900 16px Inter, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("X", bx + 14, by + 20);
+      ctx.textAlign = "left";
+      invButtons.push({ x: bx, y: by, w: 28, h: 28, index: i });
+      y += rowH;
+      if (y > panelY + panelH - rowH) break;
+    }
+    ctx.restore();
+  }
+
+  function discardItem(index) {
+    const it = game.items[index];
+    if (!it) return;
+    const p = game.player;
+    if (it.id === "hat") p.hat = false;
+    else if (it.id === "boots") p.boots = false;
+    else if (it.id === "book") p.book = false;
+    else if (it.id === "stick") p.longStick = false;
+    else if (it.id === "flashlight") p.tailLight = false;
+    game.items.splice(index, 1);
+    game.message = it.label + " WYRZUCONY";
+    game.messageTimer = 1.6;
+    playTone("drop");
+  }
+
+  function toggleInventory() {
+    if (!game || (game.state !== "play" && !game.inventoryOpen)) return;
+    game.inventoryOpen = !game.inventoryOpen;
+    playTone("pickup");
   }
 
   function drawMiniMap(x, y, w, h) {
@@ -3919,37 +4995,56 @@
     return lines.slice(0, 7);
   }
 
+  // The title is the word NATURAL drawn as graphics. The L's horizontal foot is dimmed to ~10%,
+  // so at a glance it reads NATURAI (the AL swapped for AI). As the world heals it brightens back.
   function drawLogo(cx, y, scale = 1, naturalProgress = 0) {
     ctx.save();
     ctx.textAlign = "left";
-    ctx.font = `${Math.round(54 * scale)}px Inter, system-ui, sans-serif`;
+    ctx.textBaseline = "alphabetic";
     ctx.font = `900 ${Math.round(54 * scale)}px Inter, system-ui, sans-serif`;
     const word = "NATURA";
     const wordW = ctx.measureText(word).width;
-    const iW = 20 * scale;
-    const x = cx - (wordW + iW + 10 * scale) / 2;
+    const stem = 9 * scale;
+    const foot = 26 * scale;
+    const gap = 9 * scale;
+    const x = cx - (wordW + gap + foot) / 2;
     ctx.fillStyle = palette.cream;
     ctx.fillText(word, x, y);
-    const ix = x + wordW + 10 * scale;
+    // hand-drawn L
+    const lx = Math.round(x + wordW + gap);
+    const capH = 39 * scale;
+    ctx.fillStyle = palette.cream;
+    ctx.fillRect(lx, Math.round(y - capH), Math.round(stem), Math.round(capH));
+    ctx.globalAlpha = 0.1 + clamp(naturalProgress, 0, 1) * 0.85;
     ctx.fillStyle = palette.leafLight;
-    ctx.fillRect(ix + 7 * scale, y - 47 * scale, 6 * scale, 50 * scale);
-    if (naturalProgress > 0) ctx.fillRect(ix + 7 * scale, y - 3 * scale, 20 * scale * clamp(naturalProgress, 0, 1), 6 * scale);
+    ctx.fillRect(lx, Math.round(y - stem), Math.round(foot), Math.round(stem));
+    ctx.globalAlpha = 1;
     ctx.restore();
   }
 
   function drawControlRows(panelX, y, panelW, rows) {
-    ctx.font = "800 12px Inter, system-ui, sans-serif";
+    ctx.save();
+    ctx.textBaseline = "middle";
+    const chipX = panelX + 24;
+    const chipW = 116;
+    const rowH = 22;
     for (let i = 0; i < rows.length; i += 1) {
-      const rowY = y + i * 20;
+      const rowY = y + i * rowH;
       ctx.fillStyle = "rgba(126, 203, 119, 0.16)";
-      ctx.fillRect(panelX + 22, rowY - 11, 112, 16);
+      ctx.beginPath();
+      ctx.roundRect(chipX, rowY - 9, chipW, 18, 5);
+      ctx.fill();
       ctx.fillStyle = palette.cream;
+      ctx.font = "800 12px Inter, system-ui, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(rows[i][0], panelX + 78, rowY - 1);
+      ctx.fillText(rows[i][0], chipX + chipW / 2, rowY + 1);
       ctx.textAlign = "left";
-      ctx.fillStyle = "rgba(245, 238, 209, 0.78)";
-      ctx.fillText(rows[i][1], panelX + 148, rowY - 1);
+      ctx.fillStyle = "rgba(245, 238, 209, 0.82)";
+      ctx.font = "600 12px Inter, system-ui, sans-serif";
+      ctx.fillText(rows[i][1], chipX + chipW + 18, rowY + 1);
     }
+    ctx.textBaseline = "alphabetic";
+    ctx.restore();
   }
 
   function drawPausePanel(size) {
@@ -3958,16 +5053,16 @@
     const panelX = size.w / 2 - panelW / 2;
     const panelY = Math.max(56, size.h / 2 - panelH / 2 + 20);
     const rows = [
-      ["WASD / STRZ", "ruch"],
-      ["SPACJA", "rozmowa / gryz"],
-      ["J", "wez / upusc deske"],
-      ["K", "rzuc deske"],
-      ["L", "rzuc orzeszek"],
-      ["M", "dzwiek on/off"],
-      ["ESC / P", "wroc"],
-      ["R", "od nowa"],
-      ["KWIAT", "ogon +"],
-      ["SZPINAK", "tarcza"]
+      ["WASD", "ruch (lub strzalki)"],
+      ["SPACJA", "rozmowa / gryzienie"],
+      ["J", "podnies / poloz deske"],
+      ["K", "rzut deska (atak na odleglosc)"],
+      ["L", "nakarm zdrowe zwierze"],
+      ["I", "plecak"],
+      ["E", "wejdz / wyjdz z nory"],
+      ["M", "dzwiek wl / wy"],
+      ["ESC / P", "wroc do gry"],
+      ["R", "zacznij od nowa"]
     ];
 
     ctx.save();
@@ -4011,51 +5106,49 @@
     ctx.fillStyle = "rgba(6, 9, 8, 0.76)";
     ctx.fillRect(0, 0, size.w, size.h);
     const cx = size.w / 2;
-    const cy = size.h / 2;
-    const panelW = Math.min(520, size.w - 48);
+    const panelW = Math.min(540, size.w - 48);
     const panelX = cx - panelW / 2;
-    const panelY = Math.max(36, cy - 28);
+    const panelH = 300;
+    const panelY = Math.max(150, size.h / 2 - 40);
 
     ctx.textAlign = "center";
-    drawLogo(cx, panelY - 128, 1);
-    ctx.font = "700 16px Inter, system-ui, sans-serif";
+    drawLogo(cx, panelY - 96, 1);
+    ctx.font = "700 15px Inter, system-ui, sans-serif";
     ctx.fillStyle = "rgba(245, 238, 209, 0.72)";
-    ctx.fillText("bobrowy sabotarz kontra system w lesie", cx, panelY - 94);
+    ctx.fillText("wolny jak wiatr, cichy jak mech", cx, panelY - 62);
 
     ctx.fillStyle = palette.cream;
     ctx.font = "900 22px Inter, system-ui, sans-serif";
-    ctx.fillText("START", cx, panelY - 38);
+    ctx.fillText("START", cx, panelY - 22);
+    ctx.font = "700 12px Inter, system-ui, sans-serif";
+    ctx.fillStyle = "rgba(245, 238, 209, 0.55)";
+    ctx.fillText("ENTER albo klik", cx, panelY - 4);
 
     ctx.fillStyle = "rgba(13, 18, 16, 0.72)";
-    ctx.fillRect(panelX, panelY + 8, panelW, 250);
+    ctx.fillRect(panelX, panelY + 14, panelW, panelH);
     ctx.strokeStyle = "rgba(245, 238, 209, 0.18)";
     ctx.lineWidth = 1;
-    ctx.strokeRect(panelX, panelY + 8, panelW, 250);
+    ctx.strokeRect(panelX + 0.5, panelY + 14.5, panelW - 1, panelH - 1);
 
     ctx.textAlign = "left";
     ctx.fillStyle = palette.cream;
     ctx.font = "900 14px Inter, system-ui, sans-serif";
-    ctx.fillText("STEROWANIE", panelX + 22, panelY + 34);
+    ctx.fillText("STEROWANIE", panelX + 24, panelY + 42);
 
     const rows = [
-      ["WASD / STRZ", "ruch"],
-      ["SPACJA", "rozmowa / gryz"],
-      ["J", "wez / upusc deske"],
-      ["K", "rzuc deske"],
-      ["L", "rzuc orzeszek"],
-      ["M", "dzwiek on/off"],
-      ["KWIAT", "ogon +"],
-      ["SZPINAK", "tarcza"],
+      ["WASD", "ruch (lub strzalki)"],
+      ["SPACJA", "rozmowa / gryzienie"],
+      ["J", "podnies / poloz deske"],
+      ["K", "rzut deska (atak na odleglosc)"],
+      ["L", "nakarm zdrowe zwierze"],
+      ["I", "plecak"],
+      ["E", "wejdz / wyjdz z nory"],
+      ["M", "dzwiek wl / wy"],
       ["ESC / P", "pauza"],
-      ["R", "restart"]
+      ["R", "od nowa"]
     ];
 
-    drawControlRows(panelX, panelY + 58, panelW, rows);
-
-    ctx.textAlign = "center";
-    ctx.fillStyle = "rgba(245, 238, 209, 0.66)";
-    ctx.font = "700 13px Inter, system-ui, sans-serif";
-    ctx.fillText("najpierw porozmawiaj z bobrami; las jeszcze oddycha spokojnie", cx, panelY + 48);
+    drawControlRows(panelX, panelY + 66, panelW, rows);
     ctx.restore();
   }
 
@@ -4158,8 +5251,12 @@
     }
   }
 
-  function coresLeftCount() {
+  function serversLeftCount() {
     return game.servers.filter((server) => !server.destroyed).length;
+  }
+
+  function bossCoresLeftCount() {
+    return game.bossCores.filter((core) => !core.destroyed).length;
   }
 
   function isRestoredAt(x, y) {
@@ -4168,17 +5265,6 @@
       if (server.destroyed && Math.hypot(x - server.x, y - server.y) < 330) return true;
     }
     return false;
-  }
-
-  function musicThreatLevel() {
-    if (!game || game.area !== "surface" || game.worldRestored) return 0;
-    const p = game.player;
-    const dataCenter = { x: DATA_CENTER.x + DATA_CENTER.w / 2, y: DATA_CENTER.y + DATA_CENTER.h / 2 };
-    const dataDistance = Math.hypot(p.x - dataCenter.x, p.y - dataCenter.y);
-    const bossDistance = Math.hypot(p.x - game.boss.x, p.y - game.boss.y);
-    if (!game.boss.defeated && (bossDistance < 760 || (coresLeftCount() === 0 && dataDistance < 1200))) return 2;
-    if (dataDistance < 1450 || p.x > DATA_CENTER.x - TILE * 4) return 1;
-    return 0;
   }
 
   function toggleMute() {
@@ -4283,36 +5369,24 @@
       musicGain.gain.setTargetAtTime(0.0001, context.currentTime, 0.4);
       return;
     }
-    const clean = game.worldRestored || game.state === "won" ? 1 : (game.servers.length - coresLeftCount()) / game.servers.length;
-    const threat = musicThreatLevel();
-    const gainTarget = game.worldRestored ? 0.78 : threat === 2 ? 0.82 : threat === 1 ? 0.76 : 0.68;
-    musicGain.gain.setTargetAtTime(gainTarget, context.currentTime, 0.8);
+    // Background music stays constant everywhere: one calm ambient bed, no threat/area switching.
+    musicGain.gain.setTargetAtTime(0.68, context.currentTime, 0.8);
     if (context.currentTime < audio.nextNote) return;
 
-    const minor = [147, 196, 220, 247, 294, 330, 392, 440];
-    const major = [196, 247, 294, 330, 392, 440, 494, 587];
-    const dataScale = [110, 147, 165, 196, 220, 247, 294, 330];
-    const bossScale = [98, 123, 147, 165, 196, 220, 247, 294];
-    const scale = threat === 2 ? bossScale : threat === 1 ? dataScale : clean > 0.55 ? major : minor;
-    const phrase = threat === 2
-      ? [0, 1, 3, 1, 4, 3, 1, 0, 5, 3, 2, 1]
-      : threat === 1
-        ? [0, 2, 1, 3, 4, 2, 1, 5, 3, 1, 2, 0]
-        : clean > 0.55
-          ? [0, 2, 4, 5, 7, 5, 4, 2, 1, 4, 6, 4]
-          : [0, 2, 3, 5, 3, 2, 0, 4, 3, 1, 2, 5];
+    const scale = [147, 196, 220, 247, 294, 330, 392, 440];
+    const phrase = [0, 2, 3, 5, 3, 2, 0, 4, 3, 1, 2, 5];
     const step = phrase[audio.index % phrase.length];
-    const octave = threat === 2 ? (audio.index % 6 === 0 ? 0.5 : 1) : audio.index % 12 === 0 ? 0.5 : audio.index % 5 === 0 ? 1.5 : 1;
+    const octave = audio.index % 12 === 0 ? 0.5 : audio.index % 5 === 0 ? 1.5 : 1;
     const note = scale[step % scale.length] * octave;
     const now = context.currentTime;
 
     const osc = context.createOscillator();
     const gain = context.createGain();
-    osc.type = threat > 0 ? "triangle" : clean > 0.55 ? "triangle" : "sine";
+    osc.type = "sine";
     osc.frequency.value = note;
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(threat === 2 ? 0.28 : threat === 1 ? 0.24 : 0.22, now + 0.08);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + (threat > 0 ? 0.72 : 0.9));
+    gain.gain.exponentialRampToValueAtTime(0.22, now + 0.08);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
     osc.connect(gain);
     gain.connect(musicGain);
     osc.start(now);
@@ -4322,7 +5396,7 @@
       const echo = context.createOscillator();
       const echoGain = context.createGain();
       echo.type = "sine";
-      echo.frequency.value = scale[(step + 2) % scale.length] * (octave >= 1.5 ? 1 : octave);
+      echo.frequency.value = scale[(step + 2) % scale.length] * octave;
       echoGain.gain.setValueAtTime(0.0001, now + 0.18);
       echoGain.gain.exponentialRampToValueAtTime(0.09, now + 0.28);
       echoGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.05);
@@ -4332,21 +5406,21 @@
       echo.stop(now + 1.1);
     }
 
-    if (audio.index % (threat > 0 ? 2 : 4) === 0) {
+    if (audio.index % 4 === 0) {
       const bass = context.createOscillator();
       const bassGain = context.createGain();
       bass.type = "triangle";
-      bass.frequency.value = scale[0] * (threat === 2 ? 0.5 : 0.5);
+      bass.frequency.value = scale[0] * 0.5;
       bassGain.gain.setValueAtTime(0.0001, now);
-      bassGain.gain.exponentialRampToValueAtTime(threat === 2 ? 0.12 : threat === 1 ? 0.1 : 0.08, now + 0.06);
-      bassGain.gain.exponentialRampToValueAtTime(0.0001, now + (threat > 0 ? 0.82 : 1.15));
+      bassGain.gain.exponentialRampToValueAtTime(0.08, now + 0.06);
+      bassGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.15);
       bass.connect(bassGain);
       bassGain.connect(musicGain);
       bass.start(now);
-      bass.stop(now + (threat > 0 ? 0.9 : 1.2));
+      bass.stop(now + 1.2);
     }
 
-    audio.nextNote = now + (threat === 2 ? 0.48 : threat === 1 ? 0.56 : clean > 0.55 ? 0.62 : 0.74);
+    audio.nextNote = now + 0.74;
     audio.index += 1;
   }
 
@@ -4361,12 +5435,20 @@
 
   window.addEventListener("resize", resize);
   window.addEventListener("keydown", (event) => {
-    if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter", "KeyE", "Escape", "KeyP", "KeyR", "KeyJ", "KeyK", "KeyL", "KeyM"].includes(event.code)) {
+    if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter", "KeyE", "Escape", "KeyP", "KeyR", "KeyJ", "KeyK", "KeyL", "KeyM", "KeyI"].includes(event.code)) {
       event.preventDefault();
     }
     initAudio();
     if (event.code === "KeyM") {
       if (!event.repeat) toggleMute();
+      return;
+    }
+    if (event.code === "KeyI" && (game.state === "play" || game.inventoryOpen)) {
+      if (!event.repeat) toggleInventory();
+      return;
+    }
+    if (event.code === "Escape" && game.inventoryOpen) {
+      if (!event.repeat) game.inventoryOpen = false;
       return;
     }
     if ((event.code === "Escape" || event.code === "KeyP") && (game.state === "play" || game.state === "paused")) {
@@ -4384,7 +5466,7 @@
       startGame();
       return;
     }
-    if (game.state === "play" && !event.repeat) {
+    if (game.state === "play" && !game.inventoryOpen && !event.repeat) {
       if (event.code === "KeyJ") {
         handlePlankAction();
         return;
@@ -4394,7 +5476,7 @@
         return;
       }
       if (event.code === "KeyL") {
-        throwNut();
+        feedAnimal();
         return;
       }
     }
@@ -4412,11 +5494,23 @@
       startGame();
       return;
     }
-    if (game.state !== "play") return;
     const rect = canvas.getBoundingClientRect();
+    const sx = (event.clientX - rect.left) * (screenSize().w / rect.width);
+    const sy = (event.clientY - rect.top) * (screenSize().h / rect.height);
+    // inventory open: clicking an X discards that item
+    if (game.inventoryOpen) {
+      for (const b of invButtons) {
+        if (sx >= b.x && sx <= b.x + b.w && sy >= b.y && sy <= b.y + b.h) {
+          discardItem(b.index);
+          break;
+        }
+      }
+      return;
+    }
+    if (game.state !== "play") return;
     const p = game.player;
-    const worldX = camera.x + (event.clientX - rect.left) * (screenSize().w / rect.width);
-    const worldY = camera.y + (event.clientY - rect.top) * (screenSize().h / rect.height);
+    const worldX = camera.x + sx;
+    const worldY = camera.y + sy;
     p.facing = Math.atan2(worldY - p.y, worldX - p.x);
     if (event.button === 2 || event.shiftKey) throwPlank();
     else punch();
