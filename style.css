@@ -37,7 +37,7 @@ body {
   height: 100vh;
   display: block;
   image-rendering: pixelated;
-  cursor: crosshair;
+  cursor: none;
   touch-action: none;
 }
 
