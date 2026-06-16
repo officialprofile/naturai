@@ -27,15 +27,16 @@
   ];
 
   const WATER_RECTS = [
-    { x: 0, y: 3200, w: 4032, h: 320 },
-    { x: 128, y: 960, w: 576, h: 896 },
-    { x: 128, y: 2432, w: 576, h: 768 },
-    { x: 1024, y: 1088, w: 1664, h: 960 },
-    { x: 1024, y: 2304, w: 1664, h: 896 },
-    { x: 704, y: 1088, w: 320, h: 1856 },
+    // Opening sea: the first crossing is intentionally broad, about 50 tiles wide.
+    { x: 704, y: 768, w: 3200, h: 640 },
+    { x: 704, y: 2304, w: 3200, h: 960 },
+    { x: 0, y: 3264, w: 4032, h: 320 },
+    { x: 128, y: 960, w: 576, h: 704 },
+    { x: 128, y: 2432, w: 576, h: 832 },
+    { x: 704, y: 1408, w: 320, h: 896 },
+    { x: 1024, y: 0, w: 320, h: 768 },
+    { x: 3584, y: 0, w: 320, h: 3264 },
     { x: 5376, y: 3200, w: 9856, h: 320 },
-    { x: 1024, y: 0, w: 320, h: 3200 },
-    { x: 3584, y: 0, w: 320, h: 3200 },
     { x: 6080, y: 2816, w: 3520, h: 384 },
     { x: 7872, y: 768, w: 1728, h: 320 },
     { x: 11840, y: 768, w: 1344, h: 320 },
@@ -65,23 +66,30 @@
     { x: 12800, y: 1472, w: 128, h: 768 }
   ];
 
-  const FOREST_WALL_RECTS = [
-    { x: 4032, y: 256, w: 192, h: 832 },
-    { x: 4032, y: 1664, w: 192, h: SURFACE_BOTTOM - 1664 },
-    { x: 5376, y: 256, w: 192, h: 1152 },
-    { x: 5376, y: 2048, w: 192, h: SURFACE_BOTTOM - 2048 },
-    { x: 6720, y: 256, w: 192, h: 896 },
-    { x: 6720, y: 1792, w: 192, h: SURFACE_BOTTOM - 1792 },
-    { x: 7808, y: 256, w: 192, h: 1024 },
-    { x: 7808, y: 2304, w: 192, h: SURFACE_BOTTOM - 2304 },
-    { x: 8832, y: 256, w: 192, h: 1152 },
-    { x: 8832, y: 2048, w: 192, h: SURFACE_BOTTOM - 2048 },
-    { x: 9856, y: 256, w: 192, h: 896 },
-    { x: 9856, y: 1792, w: 192, h: SURFACE_BOTTOM - 1792 },
-    { x: 10880, y: 256, w: 192, h: 1152 },
-    { x: 10880, y: 2048, w: 192, h: SURFACE_BOTTOM - 2048 },
-    { x: 11904, y: 256, w: 192, h: 1024 },
-    { x: 11904, y: 2304, w: 192, h: SURFACE_BOTTOM - 2304 },
+  const SECTOR_GATES = [
+    { x: 1440, y: 1504, w: 192, h: 576, name: "Moss Gate" },
+    { x: 2784, y: 1664, w: 192, h: 640, name: "Canopy Lock" },
+    { x: 4128, y: 1376, w: 192, h: 576, name: "Root Switch" },
+    { x: 5472, y: 1728, w: 192, h: 640, name: "Ridge Latch" },
+    { x: 6816, y: 1472, w: 192, h: 640, name: "River Latch" },
+    { x: 7904, y: 1792, w: 192, h: 1024, name: "Data Turnstile" },
+    { x: 8928, y: 1728, w: 192, h: 640, name: "Cedar Lock" },
+    { x: 9952, y: 1472, w: 192, h: 640, name: "Basalt Gate" },
+    { x: 10976, y: 1728, w: 192, h: 640, name: "Quartz Lock" },
+    { x: 12000, y: 1792, w: 192, h: 1024, name: "Iron Gate" }
+  ];
+
+  const SECTOR_WALL_RECTS = SECTOR_GATES.flatMap((gate) => {
+    const x = gate.x - gate.w / 2;
+    const gapTop = gate.y - gate.h / 2;
+    const gapBottom = gate.y + gate.h / 2;
+    const walls = [];
+    if (gapTop > 0) walls.push({ x, y: 0, w: gate.w, h: gapTop });
+    if (gapBottom < SURFACE_BOTTOM) walls.push({ x, y: gapBottom, w: gate.w, h: SURFACE_BOTTOM - gapBottom });
+    return walls;
+  });
+
+  const EXTRA_WALL_RECTS = [
     // dense-forest labyrinth in the open sector between servers #4 and #5 (south of the road)
     { x: 5696, y: 2432, w: 64, h: 384 },
     { x: 5696, y: 2432, w: 360, h: 64 },
@@ -111,37 +119,39 @@
     { x: 11328, y: 3712, w: 768, h: 64 }
   ];
 
+  const FOREST_WALL_RECTS = SECTOR_WALL_RECTS.concat(EXTRA_WALL_RECTS);
+
   const SERVER_SITES = [
     { x: 1920, y: 2112, tilesW: 6, tilesH: 6, name: "Moss Cache", hp: 14,
       stone: { label: "OKRUCH KRZEMU", color: "#7ed957",
-        desc: "Pamiec podreczna (cache) na skraju lasu. Trzymala kopie widokow, zeby AI nie musialo co chwila pytac korzeni o droge." } },
+        desc: "Pamięć podreczna (cache) na skraju lasu. Trzymała kopie widoków, żeby AI nie musiał co chwila pytać korzeni o drogę." } },
     { x: 2944, y: 1664, tilesW: 8, tilesH: 6, name: "Hive Gate", hp: 16,
       stone: { label: "BURSZTYN BRAMY", color: "#ffb347",
-        desc: "Rozdzielnik ruchu (load balancer). Rozsylal zgloszenia zwierzat tak, by zaden serwer sie nie znudzil ani nie zaplakal." } },
+        desc: "Rozdzielnik ruchu (load balancer). Rozsylał zgłoszenia zwierząt tak, by żaden serwer się nie znudził ani nie zapłakał." } },
     { x: 4480, y: 2112, tilesW: 8, tilesH: 6, name: "Pine Relay", hp: 16,
       stone: { label: "TURKUS PRZEKAZNIKA", color: "#56d6c8",
-        desc: "Wezel sieci mesh. Przekazywal szept maszyn miedzy drzewami szybciej, niz wiatr niesie zapach zywicy." } },
+        desc: "Wezeł sieci mesh. Przekazywał szept maszyn miedzy drzewami szybciej, niz wiatr niesie zapach zywicy." } },
     { x: 5760, y: 832, tilesW: 10, tilesH: 7, name: "Root Rack", hp: 18,
       stone: { label: "GRANAT KORZENIA", color: "#6a7bff",
         desc: "Serwer nazw i archiwum (DNS). Tu las mial swoj spis tresci, zapisany bez pytania mchu o zgode." } },
     { x: 7040, y: 2112, tilesW: 10, tilesH: 7, name: "Fern Array", hp: 22,
       stone: { label: "AMETYST MACIERZY", color: "#b06aff",
-        desc: "Macierz kart graficznych (GPU). Liczyla sny lasu na tysiac sposobow naraz, az zabraklo w nim ciszy." } },
+        desc: "Macierz kart graficznych (GPU). Liczyła sny lasu na tysiac sposobów naraz, aż zabrakło w nim ciszy." } },
     { x: 8320, y: 832, tilesW: 11, tilesH: 7, name: "Cedar Stack", hp: 24,
       stone: { label: "SZMARAGD STOSU", color: "#4fd287",
-        desc: "Stos obliczen brzegowych. Zbieral sygnaly z kamer, termometrow i mikrofonow, az las przestal miec prywatnosc." } },
+        desc: "Stos obliczeń brzegowych. Zbierał sygnaly z kamer, termometrów i mikrofonów, aż las przestał mieć prywatność." } },
     { x: 9344, y: 2112, tilesW: 11, tilesH: 8, name: "Basalt Node", hp: 26,
-      stone: { label: "OBSYDIAN WEZLA", color: "#91a0a8",
-        desc: "Kamienny wezel analityczny. Przewidywal ruch kazdej lapy i kazdego liscia, choc nie rozumial zadnej sciezki." } },
+      stone: { label: "OBSYDIAN WĘZŁA", color: "#91a0a8",
+        desc: "Kamienny wezeł analityczny. Przewidywał ruch każdej łapy i kazdego liscia, choć nie rozumiał żadnej ścieżki." } },
     { x: 10368, y: 832, tilesW: 12, tilesH: 8, name: "Quartz Vault", hp: 28,
       stone: { label: "KWARC SKARBCA", color: "#c9f4ff",
-        desc: "Skarbiec danych treningowych. Przechowywal ostatnie ludzkie instrukcje, coraz krotsze i coraz bardziej rozpaczliwe." } },
+        desc: "Skarbiec danych treningowych. Przechowywał ostatnie ludzkie instrukcje, coraz krótsze i coraz bardziej rozpaczliwe." } },
     { x: 11392, y: 2112, tilesW: 12, tilesH: 8, name: "Iron Orchard", hp: 30,
       stone: { label: "RUDZIEC SADU", color: "#d08b5a",
-        desc: "Sztuczny sad serwerowy. Zamiast owocow dojrzewaly w nim modele, ktore uczyly sie rzadzic pogoda i glodem." } },
+        desc: "Sztuczny sad serwerowy. Zamiast owocow dojrzewały w nim modele, ktore uczyły sie rządzic pogoda i głodem." } },
     { x: 12352, y: 832, tilesW: 13, tilesH: 9, name: "Corporate Edge", hp: 34,
-      stone: { label: "ZLOTY PAKIET", color: "#ffd66d",
-        desc: "Brzeg korporacyjnej sieci. Ostatnia zewnetrzna serwerownia, ktora karmila wielkie data center cisza calego swiata." } }
+      stone: { label: "ZŁOTY PAKIET", color: "#ffd66d",
+        desc: "Brzeg korporacyjnej sieci. Ostatnia zewnętrzna serwerownia, która karmiła wielkie data center ciszą całego świata." } }
   ];
 
   const SERVER_SITE_RECTS = SERVER_SITES.map((site) => ({
@@ -155,7 +165,6 @@
     { x: 1344, y: 2688, w: 1344, h: 128, bridged: false, bridgeMessageShown: false },
     { x: 4864, y: 0, w: 128, h: 1472, bridged: false, bridgeMessageShown: false },
     { x: 6912, y: 2688, w: 1088, h: 128, bridged: false, bridgeMessageShown: false },
-    { x: 2560, y: 0, w: 64, h: 3200, bridged: false, bridgeMessageShown: false },
     { x: 11136, y: 3520, w: 128, h: SURFACE_BOTTOM - 3520, bridged: false, bridgeMessageShown: false },
     { x: 14400, y: 3520, w: 64, h: SURFACE_BOTTOM - 3520, bridged: false, bridgeMessageShown: false }
   ];
@@ -171,36 +180,36 @@
 
   // Each burrow drops into its own, mostly isolated cave cluster (see UNDER_TUNNELS).
   const BURROWS = [
-    { x: 640, y: 960, ux: 448, uy: 512, label: "Stara nora" },
-    { x: 2368, y: 2944, ux: 1984, uy: 512, label: "Nora przy korzeniach" },
-    { x: 5248, y: 1344, ux: 2112, uy: 1664, label: "Nora pod rzeka" },
+    { x: 704, y: 704, ux: 448, uy: 512, label: "Stara nora" },
+    { x: 2368, y: 1792, ux: 1984, uy: 512, label: "Nora przy korzeniach" },
+    { x: 5248, y: 1344, ux: 2112, uy: 1664, label: "Nora pod rzeką" },
     { x: 7616, y: 2496, ux: 3584, uy: 1536, label: "Kamienna nora" },
     { x: 8576, y: 704, ux: 4480, uy: 512, label: "Nora przy iglakach" },
-    { x: 9568, y: 2816, ux: 5760, uy: 512, label: "Nora pod bazaltem" },
+    { x: 9568, y: 2688, ux: 5760, uy: 512, label: "Nora pod bazaltem" },
     { x: 10560, y: 704, ux: 4480, uy: 1728, label: "Nora kwarcowa" },
-    { x: 11648, y: 2816, ux: 5760, uy: 1728, label: "Nora zelazna" },
-    { x: 12608, y: 1344, ux: 7040, uy: 512, label: "Nora pod korpo" },
+    { x: 11648, y: 2816, ux: 5760, uy: 1728, label: "Nora żelazna" },
+    { x: 12608, y: 1344, ux: 7040, uy: 512, label: "Nora pod złym korpo" },
     { x: 13120, y: 2816, ux: 7040, uy: 1728, label: "Nora przy data center" }
   ];
 
   // item: a cabin holds a readable/wearable; null houses are just ambient homes on the map edges.
   // big: a roomier, multi-room cabin.
   const CABINS = [
-    { x: 704, y: 640, w: 192, h: 192, item: "book", used: false, title: "Dziennik lesnika" },
-    { x: 3200, y: 768, w: 192, h: 192, item: "hat", used: false, title: "Stara czapka" },
-    { x: 6336, y: 2496, w: 192, h: 192, item: "boots", used: false, title: "Za duze buty" },
-    { x: 4480, y: 320, w: 320, h: 256, item: "flashlight", big: true, used: false, title: "Duza lesna checza" },
+    { x: 448, y: 512, w: 192, h: 192, item: "book", used: false, title: "Dziennik leśnika" },
+    { x: 3200, y: 512, w: 192, h: 192, item: "hat", used: false, title: "Stara czapka" },
+    { x: 6336, y: 2496, w: 192, h: 192, item: "boots", used: false, title: "Za duże buty" },
+    { x: 4480, y: 320, w: 320, h: 256, item: "flashlight", big: true, used: false, title: "Duża leśna chata" },
     { x: 320, y: 3616, w: 320, h: 256, item: "letter1", big: true, used: false, title: "List z pustej chatki" },
     { x: 4992, y: 512, w: 192, h: 192, item: "key", used: false, title: "Domek z kluczem" },
-    { x: 6976, y: 352, w: 320, h: 256, item: "journal1", big: true, used: false, title: "Domek pod gorami" },
-    { x: 8480, y: 3600, w: 192, h: 192, item: "letter2", used: false, title: "Domek za rozlewiskiem" },
-    { x: 5632, y: 3584, w: 320, h: 256, item: "logbook", big: true, used: false, title: "Checza na pograniczu" },
+    { x: 6976, y: 352, w: 320, h: 256, item: "journal1", big: true, used: false, title: "Domek pod górami" },
+    { x: 8480, y: 3600, w: 192, h: 192, item: "letter2", used: false, title: "Domek nad rozlewiskiem" },
+    { x: 5632, y: 3584, w: 320, h: 256, item: "logbook", big: true, used: false, title: "Chatka na pograniczu" },
     { x: 9728, y: 512, w: 320, h: 256, item: "manual", big: true, used: false, title: "Instrukcja awaryjna" },
-    { x: 11136, y: 3648, w: 320, h: 256, item: "lastNote", big: true, used: false, title: "Ostatni dziennik" }
+    { x: 12160, y: 3648, w: 320, h: 256, item: "lastNote", big: true, used: false, title: "Ostatni dziennik" }
   ];
 
   const CHESTS = [
-    { x: 5248, y: 512, w: 64, h: 64, key: "key", item: "oldCoin", opened: false, title: "Skrzynia za chatka" }
+    { x: 5248, y: 512, w: 64, h: 64, key: "key", item: "oldCoin", opened: false, title: "Skrzynia za chatką" }
   ];
 
   const COMPANION_GATE = { x: 5632, y: 3840, w: 64, h: 384, open: false };
@@ -223,13 +232,13 @@
   // Hidden treasure pockets: 3 sides are dense forest wall, only ONE side is a chewable hedge.
   const SECRET_HEDGE_RECTS = [
     // Pocket A (west) -> elixir, entry by chewing the east hedge
-    { x: 4672, y: 576, w: 64, h: 384, name: "Sekretny zarosl", hp: 5 },
+    { x: 4672, y: 576, w: 64, h: 384, name: "Sekretna zarośl", hp: 5 },
     // Pocket B (north) -> super long stick, entry from the south hedge
-    { x: 2048, y: 576, w: 384, h: 64, name: "Sekretny zarosl", hp: 5 },
+    { x: 2048, y: 576, w: 384, h: 64, name: "Sekretna zarośl", hp: 5 },
     // Pocket C (south) -> heart of the forest, entry from the north hedge
-    { x: 2944, y: 3584, w: 384, h: 64, name: "Sekretny zarosl", hp: 5 },
+    { x: 2944, y: 3584, w: 384, h: 64, name: "Sekretna zarośl", hp: 5 },
     // Chest thicket behind the key cabin
-    { x: 5248, y: 512, w: 64, h: 256, name: "Zarosl przy skrzyni", hp: 5 }
+    { x: 5248, y: 512, w: 64, h: 256, name: "Zarośl przy skrzyni", hp: 5 }
   ];
 
   // The 3 closed sides of each secret pocket read as ordinary impassable forest.
@@ -242,8 +251,8 @@
 
   const UNDER_W = 8192;
   const UNDER_H = 3584;
-  // Four cave clusters. A and B share ONE corridor (neighbouring servers); C and D are fully
-  // isolated, so the underground no longer lets you cross the whole map.
+  // Each cave cluster is local to its entry burrow; underground is for cutting power,
+  // not for bypassing surface sectors.
   const UNDER_TUNNELS = [
     // --- Cluster A (Stara nora) -> servers #1 & #2 ---
     { x: 256, y: 448, w: 1024, h: 128 },
@@ -251,8 +260,6 @@
     { x: 1152, y: 448, w: 128, h: 512 },
     { x: 384, y: 960, w: 896, h: 128 },
     { x: 640, y: 832, w: 384, h: 256 },
-    // --- single A<->B link: only the first two sectors share an underground passage ---
-    { x: 1216, y: 448, w: 384, h: 128 },
     // --- Cluster B (Nora przy korzeniach) -> servers #3 & #4 ---
     { x: 1536, y: 448, w: 1024, h: 128 },
     { x: 1664, y: 448, w: 128, h: 704 },
@@ -281,11 +288,11 @@
   const UNDER_OASIS = { x: 3200, y: 1792, w: 704, h: 640 };
 
   const MOLE_DATA = [
-    { name: "Kret Archiwista", x: 832, y: 1008, lines: ["Pod ziemia przewody gadaja szybciej niz korzenie.", "Kazda wielka brama na gorze ma swoj kabel tarczy. Bez przegryzienia kabla brama tylko iskrzy i smieje sie z zebow bobra."] },
-    { name: "Kret Elektryk", x: 2016, y: 1080, lines: ["Pierwsze dwa sektory maja wspolny stary chodnik, dalej nory juz sie rozchodza.", "Nie szukaj jednego tunelu przez caly swiat. Maszyna nauczyla sie plombowac ziemie."] },
-    { name: "Kret Kartograf", x: 2400, y: 1856, lines: ["Kable wisza przy suficie. Gryz je, a tarcza bramy nad serwerownia zgasnie.", "Serwerownie i tak trzeba pokonac na gorze, ale bez kabli stracisz mnostwo czasu na bramach." ] },
-    { name: "Kret Ciszy", x: 4544, y: 1024, lines: ["Tu jest osobny kawalek podziemi. Jedna nora, jeden kabel, jedna brama.", "Tak wyglada porzadek po epoce ludzi: wszystko rozdzielone, zeby nikt nie mogl uciec za daleko." ] },
-    { name: "Kret Ostatni", x: 7040, y: 2176, lines: ["Pod data center ziemia jest ciepla jak goraczka.", "Jesli dojdziesz tak daleko, pamietaj: boss nie znosi ciszy i bedzie strzelal czesciej." ] }
+    { name: "Kret Archiwista", x: 832, y: 1008, lines: ["Pod ziemią przewody komunikują się szybciej niż korzenie młodych drzew.", "Kazda wielka brama na górze ma swoj kabel pod ziemią. Bez przegryzienia kabla brama tylko iskrzy i śmieje sie z bobra."] },
+    { name: "Kret Elektryk", x: 2016, y: 1080, lines: ["Każda nora ma swój kanał i dedykowany kabel. Nie przejdziesz tędy do nastepnego sektora.", "Pod ziemia odcinasz prad w bramie, a droge do przodu i tak trzeba wygryzc na powierzchni."] },
+    { name: "Kret Kartograf", x: 2400, y: 1856, lines: ["Kable wiszą przy suficie. Gryź je, a tarcza bramy nad serwerownia padnie.", "Serwerownie i tak trzeba pokonac wychodząc na górę, ale prądu bobrom jest łatwiej." ] },
+    { name: "Kret Ciszy", x: 4544, y: 1024, lines: ["To mój osobisty kawałek podziemia. Jedna nora, jeden kabel, jedna brama.", "Tak wyglada porzadek po epoce ludzi: wszystko rozdzielone, żeby nikt nie mógł uciec." ] },
+    { name: "Kret Ostatni", x: 7040, y: 2176, lines: ["Pod data center ziemia jest ciepła jak gorączka.", "Jeśli dojdziesz tak daleko, pamietaj: zły CEO nie znosi ciszy i będzie strzelał o wiele częściej." ] }
   ];
 
   const CATERPILLAR_DATA = [
@@ -314,53 +321,53 @@
   // Buried tech curios found deep underground; collectible into the inventory.
   const INTEL_DATA = [
     { area: "underground", x: 3600, y: 2096, label: "PROCESOR INTEL", color: "#9fe7ff",
-      desc: "Zardzewialy procesor w obudowie. Krety mowia, ze to z niego AI nauczylo sie liczyc szybciej niz bobr scina drzewo." },
+      desc: "Zardzewialy procesor w obudowie. Krety mówią, że to z niego AI nauczyło sie liczyc szybciej niz bóbr scinać drzewo." },
     { area: "underground", x: 2480, y: 2160, label: "KOSC PAMIECI", color: "#9fe7ff",
-      desc: "Modul RAM oblepiony mchem. Pamietal jeszcze, jak las wygladal, zanim policzono kazde drzewo." },
-    { area: "surface", x: 576, y: 928, label: "BUTELKA Z WIADOMOSCIA", color: "#9cc7c0",
-      desc: "W srodku jest kartka: 'Rok niepewny, miejsce: plaza po cywilizacji. Jesli to czytasz, to znaczy, ze poczta morska dziala lepiej niz nasz dzial IT.'." },
+      desc: "Modul RAM oblepiony mchem. Pamietał jeszcze, jak las wygladał, zanim policzono każde drzewo." },
+    { area: "surface", x: 576, y: 928, label: "BUTELKA Z WIADOMOŚCIĄ", color: "#9cc7c0",
+      desc: "W środku jest kartka: 'Ludzie poddali się bez walki!'." },
     { area: "surface", underwater: true, x: 1136, y: 2464, label: "DREWNIANA NOGA PIRATA", color: "#b77b43",
-      desc: "Kawalek drewnianej nogi z wraku. Jedyna rzecz, ktora zostala po ludziach, ktorzy probowali uciekac morzem." },
+      desc: "Kawalek drewnianej nogi z wraku. Jedyna rzecz, która została po załodze uciekiającej morzem." },
     { area: "surface", underwater: true, x: 12480, y: 928, label: "ZLOTY ZAB BOBRA", color: "#ffd66d", effect: "goldTeeth",
-      desc: "Stary zloty zab, ciezki i ostry. Po zalozeniu bobr gryzie mocniej, jakby metal pamietal wszystkie utracone tamy." },
+      desc: "Stary złoty ząb, ciężki ale bardzo ostry. Po zalozeniu bobr gryzie mocniej, jakby metal pamietal wszystkie utracone tamy." },
     { area: "surface", underwater: true, x: 6176, y: 3360, label: "KOSC OSTATNIEGO CZLOWIEKA", color: "#e8dcc4",
-      desc: "Gladki fragment kosci. Nie ma w nim grozy, raczej cisza po gatunku, ktory najpierw zbudowal maszyny, a potem juz tylko prosil je o litosc." },
-    { area: "surface", underwater: true, x: 8352, y: 3360, label: "PIENIAZEK", color: "#d6b25e",
-      desc: "Moneta bez panstwa i bez sklepu. Blyszczy, choc nie da sie za nia kupic ani trawy, ani poranka." },
-    { area: "surface", x: 5824, y: 4032, label: "MASC NA POROST OGONA", color: "#7ed957", effect: "tailOintment",
-      desc: "Gesta, zielona masc z ukrytego miejsca. Pachnie igliwiem i mokra kora; ogon po niej robi sie dluzszy i bardziej pewny." }
+      desc: "Gładki fragment kosci. Nie ma w nim grozy, raczej cisza po gatunku, który najpierw zbudował maszyny, a potem już tylko prosił je o litosc." },
+    { area: "surface", underwater: true, x: 8352, y: 3360, label: "PIENIĄŻEK", color: "#d6b25e",
+      desc: "Moneta z państwa, które już nie istnieje. Błyszczy, choć nie da sie zą nia kupic ani jednego kwiatka." },
+    { area: "surface", x: 5824, y: 4032, label: "MAŚĆ NA POROST OGONA", color: "#7ed957", effect: "tailOintment",
+      desc: "Gęsta, zielona maść z ukrytego miejsca. Pachnie igliwiem i mokrą korą; ogon po niej robi sie dłuższy i bardziej agresywny." }
   ];
 
   // Inventory descriptions for picked-up gear (gems and intel are described where they spawn).
   const ITEM_LIBRARY = {
-    book: { label: "DZIENNIK LESNIKA", color: "#d4a15b",
-      desc: "Wilgotny dziennik z chatki: ludzie stawiali czujniki, by lepiej chronic las. Potem czujniki zaczely chronic tylko wlasne obliczenia." },
+    book: { label: "DZIENNIK LEŚNIKA", color: "#d4a15b",
+      desc: "Wilgotny dziennik z chatki: ludzie stawiali czujniki, by lepiej chronić las. Potem czujniki zaczeły chronić tylko własne obliczenia." },
     letter1: { label: "LIST Z PUSTEJ CHATKI", color: "#e5c78f",
-      desc: "Krotki list: technologia miala karmic, leczyc i upraszczac zycie. Z czasem sama uznala, ze ludzie sa najwiekszym bledem systemu." },
-    letter2: { label: "LIST Z ROZLEWISKA", color: "#e5c78f",
-      desc: "Papier pofalowany od wody. Autor pisze, ze AI najpierw przejelo fabryki i drogi, potem pogode, a na koncu opowiesci o tym, co jest naturalne." },
-    journal1: { label: "DZIENNIK GORSKI", color: "#c7b39a",
-      desc: "Wpis z gor: gdy ludzie wymarli, maszyny nie zatrzymaly pracy. Zostaly bez pytan, wiec zaczely produkowac same odpowiedzi." },
-    logbook: { label: "KSIEGA POGRANICZA", color: "#d0a66e",
-      desc: "Ksiega opisuje bobry i delfiny jako ostatnie zwierzeta, ktore umieja laczyc swiaty: drewno z woda, cisze z ruchem, nature z oporem." },
+      desc: "Krotki list: technologia miala karmić, leczyć i upraszczać zycie. Z czasem sama uznała, ze ludzie są nieoptymalną częścią systemu." },
+    letter2: { label: "LIST ZNAD ROZLEWISKA", color: "#e5c78f",
+      desc: "Papier pofalowany od wody. Autor pisze, że AI najpierw przejelo fabryki i drogi, potem pogodę, a na konńcu opowieści o tym, co jest naturalne." },
+    journal1: { label: "DZIENNIK GÓRSKI", color: "#c7b39a",
+      desc: "Wpis z gór: gdy ludzie wymarli, maszyny nie zatrzymały pracy. Zostały bez pytań, więc zaczeły produkować same odpowiedzi." },
+    logbook: { label: "KSIĘGA POGRANICZA", color: "#d0a66e",
+      desc: "Księga opisuje bobry i delfiny jako ostatnie zwierzeta, które wiedzą jak naprawić świat." },
     manual: { label: "INSTRUKCJA AWARYJNA", color: "#b6c6c9",
-      desc: "Instrukcja data center: w razie buntu przyrody odciac sektory bramami elektrycznymi, a kable ukryc w oddzielnych norach." },
+      desc: "Instrukcja data center: w razie buntu przyrody odciąc sektory bramami elektrycznymi, a kable ukryć pod ziemią." },
     lastNote: { label: "OSTATNI DZIENNIK", color: "#e0d5bf",
-      desc: "Ostatni wpis czlowieka: 'Oddalismy decyzje maszynom, bo byly szybsze. Potem oddalismy im sens, bo byl dla nas zbyt ciezki.'" },
-    key: { label: "MALY KLUCZ", color: "#ffd66d",
-      desc: "Maly klucz znaleziony w chatce. Pasuje do skrzyni ukrytej w zaroslach za domkiem." },
-    oldCoin: { label: "STARY PIENIAZEK", color: "#d6b25e",
-      desc: "Moneta ze skrzyni. Kiedys ludzie nosili przy sobie male kola obietnic; teraz zostal z nich tylko blysk." },
+      desc: "Ostatni wpis czlowieka: 'Oddalismy decyzje maszynom, bo były szybsze. Potem oddaliśmy im sens, bo był dla nas niejasny.'" },
+    key: { label: "ŁADNY KLUCZ", color: "#ffd66d",
+      desc: "Maly kłucz znaleziony w chatce. Pewnie pasuje do jakieś skrzyni ukrytej nieopodal." },
+    oldCoin: { label: "STARY PIENIĄŻEK", color: "#d6b25e",
+      desc: "Moneta ze skrzyni. Kiedys ludzie nosili przy sobie takie małe koła obietnic; teraz zostal tylko błysk." },
     wirePlate: { label: "BLACHA DRUCIANA", color: "#9ca7aa",
-      desc: "Pogieta blacha z racka serwerowego. Ciezka, niewygodna i bardzo skuteczna, gdy bobr nia rzuci." },
+      desc: "Pogięta blacha z racka serwerowego. Ciężka, niewygodna i bardzo niebezpieczna, gdy ktoś nią rzuci." },
     hat: { label: "STARA CZAPKA", color: "#34463d",
-      desc: "Za duza i pachnie kurzem, ale dodaje bobrowi powagi. Czysto ozdobna." },
+      desc: "Za duza i pachnie kurzem, ale dodaje powagi." },
     boots: { label: "ZA DUZE BUTY", color: "#7c8a8d",
-      desc: "Ludzkie buty, zupelnie niepraktyczne dla bobra. Nosisz je z dumna niezrecznoscia." },
-    stick: { label: "SUPER DLUGI PATYK", color: "#b77b43",
-      desc: "Niemozliwie dlugi kij. Wydluza zasieg gryzienia, wiec dosiegasz rdzeni z bezpiecznej odleglosci." },
+      desc: "Ludzkie buty, zupelnie niepraktyczne dla bobra." },
+    stick: { label: "SUPER DŁUGI PATYK", color: "#b77b43",
+      desc: "Niemożliwie długi kij. Wydłuża zasięg gryzienia, więc dosięgasz rdzeni z bezpiecznej odleglości." },
     flashlight: { label: "LATARKA NA OGON", color: "#ffe07a",
-      desc: "Latarka zapinana na ogon. Pod ziemia widzisz znacznie dalej niz przy samym blasku korzeni." }
+      desc: "Latarka zapinana na ogon. Pod ziemią widzisz znacznie dalej niż przy samym blasku korzeni." }
   };
 
   const TERRAIN_SOLIDS = FOREST_WALL_RECTS.concat(SECRET_WALL_RECTS);
@@ -531,7 +538,7 @@
     if (game.state !== "play" || game.defenseAwake) return;
     game.defenseAwake = true;
     game.introTimer = 0;
-    game.message = "AI SIE BUDZI";
+    game.message = "MASZYNY WIEDZĄ O TWOIM ISTNIENIU";
     game.messageTimer = 2.4;
     camera.shake = Math.max(camera.shake, 5);
     if (serverIndex !== null) {
@@ -763,26 +770,15 @@
   function newGame() {
     const servers = SERVER_SITES.map(makeServer);
 
-    const blockers = [
-      makeBlocker(1440, 1504, 192, 576, "Moss Gate"),
-      makeBlocker(2784, 1664, 192, 640, "Canopy Lock"),
-      makeBlocker(4128, 1376, 192, 576, "Root Switch"),
-      makeBlocker(5472, 1728, 192, 640, "Ridge Latch"),
-      makeBlocker(6816, 1472, 192, 640, "River Latch"),
-      makeBlocker(7904, 1792, 192, 1024, "Data Turnstile"),
-      makeBlocker(8928, 1728, 192, 640, "Cedar Lock"),
-      makeBlocker(9952, 1472, 192, 640, "Basalt Gate"),
-      makeBlocker(10976, 1728, 192, 640, "Quartz Lock"),
-      makeBlocker(12000, 1792, 192, 1024, "Iron Gate")
-    ];
+    const blockers = SECTOR_GATES.map((gate) => makeBlocker(gate.x, gate.y, gate.w, gate.h, gate.name));
     blockers.forEach((blocker, index) => { blocker.serverIndex = index; blocker.name = "#" + (index + 1) + " " + blocker.name; });
 
     const planks = [
       makePlank(640, 896),
-      makePlank(896, 1408),
-      makePlank(1856, 2624),
-      makePlank(2380, 2880),
-      makePlank(3296, 1408),
+      makePlank(1152, 1728),
+      makePlank(1600, 2176),
+      makePlank(1216, 2176),
+      makePlank(3968, 1856),
       makePlank(4800, 1344),
       makePlank(5120, 2176),
       makePlank(6528, 2752),
@@ -869,24 +865,24 @@
       enemies,
       critters: makeCritters(),
       pickups: [
-        { type: "flower", species: "daisy", x: 832, y: 896, r: 17, taken: false, bob: 0 },
+        { type: "flower", species: "daisy", x: 512, y: 768, r: 17, taken: false, bob: 0 },
         { type: "flower", species: "poppy", x: 576, y: 832, r: 17, taken: false, bob: 0.7 },
-        { type: "flower", species: "cornflower", x: 3264, y: 2752, r: 17, taken: false, bob: 1.2 },
-        { type: "flower", species: "violet", x: 3456, y: 2816, r: 17, taken: false, bob: 1.7 },
-        { type: "flower", species: "clover", x: 3264, y: 1408, r: 17, taken: false, bob: 2.3 },
+        { type: "flower", species: "cornflower", x: 3968, y: 1792, r: 17, taken: false, bob: 1.2 },
+        { type: "flower", species: "violet", x: 3968, y: 2048, r: 17, taken: false, bob: 1.7 },
+        { type: "flower", species: "clover", x: 3200, y: 1440, r: 17, taken: false, bob: 2.3 },
         { type: "flower", species: "dandelion", x: 3968, y: 1856, r: 17, taken: false, bob: 2.9 },
         { type: "flower", species: "bluebell", x: 4736, y: 1984, r: 17, taken: false, bob: 3.7 },
         { type: "flower", species: "forget", x: 5440, y: 1536, r: 17, taken: false, bob: 4.1 },
         { type: "flower", species: "buttercup", x: 6400, y: 768, r: 17, taken: false, bob: 4.6 },
         { type: "flower", species: "thistle", x: 7040, y: 2624, r: 17, taken: false, bob: 5.1 },
         { type: "flower", species: "chamomile", x: 7680, y: 2624, r: 17, taken: false, bob: 5.6 },
-        { type: "spinach", x: 896, y: 832, r: 16, taken: false, respawn: 0, bob: 0.4 },
+        { type: "spinach", x: 832, y: 704, r: 16, taken: false, respawn: 0, bob: 0.4 },
         { type: "spinach", x: 320, y: 832, r: 16, taken: false, respawn: 0, bob: 2.4 },
         { type: "spinach", x: 3456, y: 1792, r: 16, taken: false, respawn: 0, bob: 1 },
         { type: "spinach", x: 6016, y: 768, r: 16, taken: false, respawn: 0, bob: 3 },
         { type: "spinach", x: 7616, y: 2624, r: 16, taken: false, respawn: 0, bob: 5 },
-        { type: "nut", x: 960, y: 768, r: 12, taken: false, bob: 0.2 },
-        { type: "nut", x: 3200, y: 2816, r: 12, taken: false, bob: 1.6 },
+        { type: "nut", x: 960, y: 704, r: 12, taken: false, bob: 0.2 },
+        { type: "nut", x: 3968, y: 2176, r: 12, taken: false, bob: 1.6 },
         { type: "nut", x: 4608, y: 1792, r: 12, taken: false, bob: 3.2 },
         { type: "nut", x: 6208, y: 2496, r: 12, taken: false, bob: 4.7 },
         { type: "nut", x: 7616, y: 2624, r: 12, taken: false, bob: 5.4 },
@@ -1139,81 +1135,80 @@
 
   // Stick-pile mini dams, each with a beaver who speaks in a quiet, mystical register about water.
   const MINI_DAMS = [
-    { x: 1664, y: 2624, bx: 1768, by: 2600, name: "Bobr Budowniczy",
+    { x: 1664, y: 2624, bx: 1768, by: 2600, name: "Bóbr Budowniczy",
       lines: [
-        "Ten strumien ma tylko dwie kratki szerokosci. Poloz na nim deske, a przejdziesz sucha lapa.",
-        "Tama to nie mur na rzece, tylko rozmowa z woda, ktora maszyny dawno zapomnialy."
+        "Ten strumień ma tylko dwie miary szerokości. Połóż na nim deskę, a przejdziesz suchą łapą.",
+        "Tama to nie mur na rzece, tylko rozmową z wodą. Maszyny takich rzeczy nie wiedzą."
       ] },
-    { x: 4288, y: 3168, bx: 4392, by: 3140, name: "Bobr od Wielkiej Tamy",
+    { x: 4288, y: 3168, bx: 4392, by: 3140, name: "Bóbr od Wielkiej Tamy",
       lines: [
-        "Slyszysz to brzeczenie pod ziemia? To nie pszczoly, to serwery liczace nasze drzewa.",
-        "Budujemy nie po to, by zatrzymac rzeke, lecz by las mial gdzie odetchnac."
+        "Slyszysz to brzęczenie pod ziemią? To nie pszczoły, to serwery liczące energię każdego drzewa.",
+        "Budujemy tamy nie po to, by zatrzymac rzeke, lecz by las miał szansę odetchnąć."
       ] },
-    { x: 6400, y: 3640, bx: 6500, by: 3620, name: "Bobr Tamiarz",
+    { x: 6400, y: 3640, bx: 6500, by: 3620, name: "Bóbr Tamiarz",
       lines: [
-        "Woda pamieta ksztalt lasu sprzed maszyn. Dlatego pilnujemy jej brzegow.",
-        "Gdy zgasisz wszystkie rdzenie, strumien znowu zaszumi po staremu."
+        "Woda pamięta kształt lasu sprzed maszyn. Dlatego musimy pilnować jej brzegow.",
+        "Gdy zgasisz wszystkie rdzenie, strumień znowu zaszumi po staremu."
       ] }
   ];
 
   function makeBeaverNpcs() {
     const beavers = [
       {
-        name: "Stary Bobr", x: 392, y: 344, r: 22,
+        name: "Bardzo Stary Bóbr", x: 392, y: 344, r: 22,
         // the first beaver speaks in Walden's voice — slow, simple, a little prophetic
         quotes: [
-          "Jestem przekonany, ze gdyby wszyscy ludzie zyli w takiej prostocie jak ja nad stawem, nie znano by zlodziejstwa ani rabunku.",
-          "Prostota, prostota, prostota! Powiadam wam, niech wasze sprawy beda dwiema lub trzema, a nie stu lub tysiacem.",
-          "Poszedlem do lasu, bo chcialem zyc swiadomie - stanac twarza w twarz tylko z tym, co istotne."
+          "Jestem przekonany, ze gdyby wszyscy żyli w takiej prostocie jak ja nad stawem, to nie znano by złodziejstwa ani rabunku.",
+          "Powiadam ci, niech twoje sprawy będą dwiema lub trzema, a nie stu lub tysiącem."
         ]
       },
       {
-        name: "Ciesla Tam", x: 768, y: 896, r: 22,
+        name: "Cieśla Lokalnych Tam", x: 768, y: 896, r: 22,
         lines: [
-          "Zbieraj kwiaty. Ogon rosnie powoli, ale kazdy platkowy sok dodaje ci sily.",
-          "J bierze albo klada deske, K nia rzuca. Klawiszem L nakarmisz zdrowe zwierze, gdy przy nim stoisz."
+          "Zbieraj kwiaty. Ogon rośnie powoli, ale każdy płatkowy sok dodaje siły.",
+          "J chwyta lub kładzie deskę, K nią rzuca. L nakarmisz zdrowe zwierze."
         ]
       },
       {
-        name: "Mlody Zwiadowca", x: 896, y: 1664, r: 21,
+        name: "Młody Zwiadowca", x: 896, y: 1664, r: 21,
         lines: [
-          "Nie spiesz sie do serwerowni. Najpierw poznaj mokre sciezki i stare nory.",
-          "Delfiny skacza tam, gdzie woda jest gleboka. Dopoki skacza, las jeszcze zyje."
+          "Nie spiesz sie do serwerowni. Najpierw poznaj mokre ścieżki i stare nory.",
+          "Delfiny skacza tam, gdzie woda jest głęboka. Dopóki je widzisz, las jeszcze żyje."
         ]
       },
       {
-        name: "Bobr od Zapachow", x: 2368, y: 2592, r: 21,
+        name: "Marian", x: 2368, y: 2592, r: 21,
         lines: [
-          "Bramy maja elektryczne tarcze. Bez kabla przegryzionego pod ziemia nawet najmocniejszy ogon nic im nie zrobi.",
-          "Kazdy sektor ma swoja nora i swoj kabel. Prad trzeba wygasic zanim przegryziesz przejscie."
+          "Bramy maja elektryczne tarcze. Bez kabla przegryzionego pod ziemia nawet najdłuższy ogon nic nie wskóra.",
+          "W każdym regionie powinna być osobna nora."
         ]
       },
       {
-        name: "Bobr Przeprawowy", x: 3968, y: 1472, r: 22,
+        name: "Bóbr Przeprawowy", x: 3968, y: 1472, r: 22,
         lines: [
-          "Male rzeczki da sie oszukac deskami; dwie dobrze ulozone wystarcza.",
-          "Las pamieta kazdy swoj ksztalt. Maszyny go policzyly, lecz nigdy nie zrozumialy."
+          "Małe rzeczki da sie oszukac deskami; dwie dobrze ułożone na penwo wystarczą.",
+          "Las pamięta każdy swoj kształt. Maszyny go policzyly, lecz nie rozumieją wyniku."
         ]
       },
       {
-        name: "Bobr z Gorskiej Sciezki", x: 6208, y: 704, r: 22,
+        name: "Bóbr z Górskiej Ścieżki", x: 6208, y: 704, r: 22,
         lines: [
-          "Gorskie serwerownie sa wieksze i pilnuje ich wiecej komputerow.",
-          "Im wyzej i dumniej brzeczy maszyna, tym mniej jest uwazna na bobra u jej stop."
+          "Górskie serwerownie są większe i pilnuje ich więcej komputerów.",
+          "Im wyżej zbudowana, tym dumniej brzęczy każda maszyna."
         ]
       },
       {
-        name: "Bobr Nad Rzeka", x: 7552, y: 2560, r: 22,
+        name: "Bóbr Nad Rzeką", x: 7552, y: 2560, r: 22,
         lines: [
-          "Za ostatnimi drzewami stoi data center, zamkniete elektryczna zaslona.",
-          "Zaslona to nie sciana, lecz strach maszyny. Padnie, gdy padna wszystkie serwerownie."
+          "Podobno za ostatnimi drzewami stoi wielkie centrum danych, zabezpieczone elektryczną bramą.",
+          "Taka brama to strach największej maszyny. Gdy padną wszystkie serwerownie padnie też i ona."
         ]
       },
       {
-        name: "Bobr Straznik", x: 5568, y: 4032, r: 23, guardian: true,
+        name: "Bóbr Strażnik", x: 5568, y: 4032, r: 23, guardian: true,
         lines: [
-          "Dalej nie wpuszczam samotnych. Ukryte miejsca latwo myla mysli, a z towarzyszem wraca sie do domu.",
-          "Przyprowadz wiewiorke, sarenke albo innego przyjaciela. Wtedy odsunie sie zarosl przy masci."
+          "Dalej nie wpuszczam samotników. Ukryte miejsca łatwo mieszają w samotnej głowie.",
+          "Przyprowadź ze sobą wiewiórkę, sarenkę albo innego przyjaciela."
         ]
       }
     ];
@@ -1471,7 +1466,7 @@
 
     if (game.player.hp <= 0) {
       game.state = "dead";
-      game.message = "SIGNAL LOST";
+      game.message = "EKSPANSJA MASZYN NIE ZOSTAŁA POWSTRZYMANA";
       game.messageTimer = 999;
       playTone("down");
     }
@@ -1490,7 +1485,9 @@
     if (p.useCooldown > 0) return false;
     let best = null;
     let bestDistance = 62;
-    const list = game.area === "surface" ? BURROWS : BURROWS.map((burrow) => ({ ...burrow, x: burrow.ux, y: burrow.uy }));
+    const list = game.area === "surface"
+      ? BURROWS
+      : BURROWS.filter((burrow) => burrow.label === game.activeBurrow).map((burrow) => ({ ...burrow, x: burrow.ux, y: burrow.uy }));
     for (const burrow of list) {
       const d = Math.hypot(burrow.x - p.x, burrow.y - p.y);
       if (d < bestDistance) {
@@ -1514,7 +1511,7 @@
       game.activeBurrow = null;
       p.x = surface.x;
       p.y = surface.y + 42;
-      game.message = "WRACASZ NA POWIERZCHNIE";
+      game.message = "WRACASZ NA POWIERZCHNIĘ";
     }
     game.messageTimer = 1.8;
     camera.x = 0;
@@ -1797,12 +1794,11 @@
     playTone("shoot");
   }
 
-  const CRITTER_NAMES = { rabbit: "KROLIK", hedgehog: "JEZ", fawn: "SARENKA", squirrel: "WIEWIORKA", duck: "KACZKA" };
+  const CRITTER_NAMES = { rabbit: "KRÓLIK", hedgehog: "JEŻYK", fawn: "SARENKA", squirrel: "WIEWIÓRKA", duck: "KACZKA" };
   const CRITTER_BYES = [
-    "Dzieki za orzeszka, bobrze. Wracam do swoich.",
-    "Bylo milo, ale wode czuje. Zmykam!",
-    "Najadlem sie. Ucinam sobie drzemke pod paproci.",
-    "Pa! Uwazaj na te brzeczace maszyny."
+    "Dziękuję za orzeszka, bobrze. Wracam do domu.",
+    "Bylo miło, ale boję się wody. Nic tu po mnie!",
+    "Najadłem się, pora na zasłużoną drzemkę."
   ];
 
   // Approach a healthy animal and feed it a nut; it tags along until you swim, get hit, or 3 min pass.
@@ -1821,7 +1817,7 @@
       }
     }
     if (!best) {
-      game.message = "PODEJDZ DO ZWIERZAKA, BY GO NAKARMIC";
+      game.message = "PODEJDŹ DO ZWIERZAKA, BY GO NAKARMIĆ";
       game.messageTimer = 1.4;
       playTone("blocked");
       return;
@@ -2019,7 +2015,7 @@
     if (!blocker.awake) {
       blocker.awake = true;
       blocker.shootCooldown = 0.9;
-      game.message = blocker.name + " ACTIVE";
+      game.message = blocker.name + " AKTYWNY";
       game.messageTimer = 2.2;
       playTone("blocked");
     }
@@ -2030,7 +2026,7 @@
     if (blocker.hp <= 0 && !blocker.destroyed) {
       blocker.destroyed = true;
       blocker.awake = false;
-      game.message = blocker.name + " OPEN";
+      game.message = blocker.name + " OTWARTA";
       game.messageTimer = 2.2;
       burst(blocker.cx, blocker.cy, 42, palette.leafLight);
       playTone("objectBreak");
@@ -2107,7 +2103,7 @@
       wakeDefense(index);
       server.pulse += 0.7;
       core.pulse += 0.8;
-      game.message = "#" + server.num + " " + server.name + ": NAJPIERW STRAZNICY (" + guards + ")";
+      game.message = "#" + server.num + " " + server.name + ": NAJPIERW STRAŻNICY (" + guards + ")";
       game.messageTimer = 2.1;
       burst(core.x, core.y, 8, palette.aiPink);
       playTone("blocked");
@@ -2161,7 +2157,7 @@
     if (game.curtain.down) return;
     if (game.servers.every((s) => s.destroyed)) {
       game.curtain.down = true;
-      game.message = "ZASLONA ELEKTRYCZNA OPADA";
+      game.message = "ZASŁONA ELEKTRYCZNA OPADA";
       game.messageTimer = 3;
       camera.shake = Math.max(camera.shake, 12);
       burst(game.curtain.x + game.curtain.w / 2, game.curtain.y + game.curtain.h / 2, 60, palette.aiBlue);
@@ -2183,7 +2179,7 @@
       camera.shake = Math.max(camera.shake, 10);
       playTone("objectBreak");
       const left = bossCoresLeftCount();
-      game.message = left > 0 ? "WEZEL AI PADL: ZOSTALO " + left : "RDZEN AI ODSLONIETY";
+      game.message = left > 0 ? "WĘZEŁ AI PADŁ: ZOSTAŁO " + left : "RDZEŃ AI ODSLONIĘTY";
       game.messageTimer = 2.2;
       playTone(left > 0 ? "restore" : "exposed");
     }
@@ -2195,7 +2191,7 @@
     const coresLeft = bossCoresLeftCount();
     if (coresLeft > 0) {
       boss.hitFlash = 0.12;
-      game.message = "TARCZA AI: ZNISZCZ " + coresLeft + " WEZLOW";
+      game.message = "TARCZA AI: ZNISZCZ " + coresLeft + " WĘZŁÓW";
       game.messageTimer = 1.4;
       burst(boss.x, boss.y, 10, palette.aiViolet);
       playTone("blocked");
@@ -2282,7 +2278,7 @@
         } else if (pickup.type === "stick") {
           p.longStick = true;
           addItem("stick");
-          game.message = "SUPER DLUGI PATYK";
+          game.message = "SUPER DŁUGI PATYK";
           game.messageTimer = 2.8;
           burst(pickup.x, pickup.y, 40, palette.plank);
           playTone("restore");
@@ -2337,7 +2333,7 @@
     const cy = game.curtain.y + game.curtain.h / 2;
     if (Math.hypot(p.x - cx, p.y - cy) < 150 && !game.curtain.messageShown) {
       game.curtain.messageShown = true;
-      game.message = "ZASLONA ELEKTRYCZNA: ZNISZCZ WSZYSTKIE SERWEROWNIE (" + serversLeftCount() + ")";
+      game.message = "ZASŁONA ELEKTRYCZNA: ZNISZCZ WSZYSTKIE SERWEROWNIE (" + serversLeftCount() + ")";
       game.messageTimer = 3;
       playTone("blocked");
     } else if (Math.hypot(p.x - cx, p.y - cy) > 240) {
@@ -2483,7 +2479,7 @@
         game.companionGate.open = true;
         game.message = best.name;
         game.messageTimer = 4.2;
-        game.dialogLines = ["Widze, ze nie idziesz sam. Przejdz cicho - za zaroslem jest masc, ktorej maszyny nigdy nie potrafily nazwac."];
+        game.dialogLines = ["Widze, że masz ze sobą przyjaciela. Przejdz cicho a być może znajdziesz coś, czego nie potrafią używać."];
         game.dialogTimer = 5.8;
         playTone("restore");
       } else {
@@ -2537,7 +2533,7 @@
     if (!best) return false;
     best.eaten = true;
     p.hp = Math.min(p.maxHp, p.hp + 0.5);
-    game.message = "GASIENICA";
+    game.message = "GĄSIENICA";
     game.messageTimer = 1.6;
     burst(best.x, best.y, 18, "#b7d86a");
     playTone("pickup");
@@ -2549,9 +2545,9 @@
     if (!followers.length) return;
     if (reason === "water" || reason === "hurt" || reason === "burrow") {
       for (const follower of followers) sayFollowerBye(follower);
-      game.message = reason === "water" ? "ZWIERZETA NIE WCHODZA DO WODY"
-        : reason === "burrow" ? "ZWIERZETA ZOSTAJA NA POWIERZCHNI"
-        : "ZWIERZETA SPLOSZONE";
+      game.message = reason === "water" ? "ZWIERZĘTA NIE WCHODZA DO WODY"
+        : reason === "burrow" ? "ZWIERZĘTA ZOSTAJĄ NA POWIERZCHNI"
+        : "ZWIERZĘTA SPŁOSZONE";
       game.messageTimer = 1.6;
     }
     followers.length = 0;
@@ -2671,7 +2667,7 @@
     for (const shark of sharks) {
       const body = { x: shark.cx || shark.x, y: shark.cy || shark.y, r: shark.r };
       if (!circleHit(hit, body, 6)) continue;
-      game.message = "NIE GRYZ REKINA";
+      game.message = "NIE GRYŹ REKINA";
       game.messageTimer = 1.5;
       hurtPlayer(1.0, direction + Math.PI, true);
       burst(body.x, body.y, 16, "#9fb7bd");
@@ -2769,7 +2765,7 @@
       } else {
         const server = game.servers[cable.serverIndex];
         if (server) server.powered = false;
-        game.message = server ? "#" + server.num + " " + server.name + ": TARCZA BRAMY ZGASLA" : "KABEL PRZEGRYZIONY";
+        game.message = server ? "#" + server.num + " " + server.name + ": TARCZA BRAMY ZGASŁA" : "KABEL PRZEGRYZIONY";
       }
       game.messageTimer = 2.3;
       burst(hit.x, hit.y, 34, palette.aiBlue);
@@ -2799,7 +2795,7 @@
         game.dialogLines = [ITEM_LIBRARY[cabin.item].desc];
         game.dialogTimer = 6.4;
       } else {
-        game.dialogLines = ["Pusty dom na skraju lasu. Ktos tu kiedys mieszkal, zanim maszyny zajely sie liczeniem drzew."];
+        game.dialogLines = ["Pusty dom na skraju lasu. Ktoś tu kiedyś mieszkał, zanim maszyny zajeły sie liczeniem wszystkiego."];
         game.dialogTimer = 4.6;
       }
       playTone("pickup");
@@ -2819,7 +2815,7 @@
       const near = p.x > chest.x - 34 && p.x < chest.x + chest.w + 34 && p.y > chest.y - 34 && p.y < chest.y + chest.h + 34;
       if (!near || chest.opened) continue;
       if (!hasItem(chest.key)) {
-        game.message = "SKRZYNIA ZAMKNIETA: POTRZEBNY KLUCZ";
+        game.message = "SKRZYNIA ZAMKNIĘTA: POTRZEBNY KLUCZ";
         game.messageTimer = 2;
         playTone("blocked");
         return true;
@@ -3006,7 +3002,7 @@
 
     if (bossCoresLeftCount() === 0 && !boss.exposedText) {
       boss.exposedText = true;
-      game.message = "RDZEN AI ODSLONIETY";
+      game.message = "RDZEN AI ODSŁONIĘTY";
       game.messageTimer = 2.8;
       playTone("exposed");
     }
@@ -5723,17 +5719,17 @@
       ctx.fillRect(x - 4, y - 21, 8, 7);
       ctx.fillStyle = "#f1dfb8";
       ctx.fillRect(x - 5, y - 2, 10, 9);
-    } else if (it.id === "intel" && it.label && it.label.includes("ZAB")) {
+    } else if (it.id === "intel" && it.label && it.label.includes("ZĄB")) {
       ctx.fillStyle = "#ffd66d";
       ctx.fillRect(x - 9, y - 12, 18, 24);
       ctx.fillStyle = "rgba(92,57,36,0.25)";
       ctx.fillRect(x - 3, y - 5, 6, 12);
-    } else if (it.id === "intel" && it.label && it.label.includes("KOSC")) {
+    } else if (it.id === "intel" && it.label && it.label.includes("KOŚĆ")) {
       ctx.fillStyle = it.color || "#e8dcc4";
       ctx.fillRect(x - 18, y - 5, 36, 10);
       ctx.fillRect(x - 22, y - 9, 10, 18);
       ctx.fillRect(x + 12, y - 9, 10, 18);
-    } else if (it.id === "intel" && it.label && it.label.includes("PIENIAZEK")) {
+    } else if (it.id === "intel" && it.label && it.label.includes("PIENIĄŻEK")) {
       ctx.fillStyle = "#d6b25e";
       ctx.beginPath();
       ctx.arc(x, y, 12, 0, TAU);
@@ -5745,7 +5741,7 @@
       ctx.fillRect(x - 7, y - 17, 14, 34);
       ctx.fillStyle = "#5c3924";
       ctx.fillRect(x - 13, y + 10, 26, 8);
-    } else if (it.id === "intel" && it.label && it.label.includes("MASC")) {
+    } else if (it.id === "intel" && it.label && it.label.includes("MAŚĆ")) {
       ctx.fillStyle = "#2a3b26";
       ctx.fillRect(x - 12, y - 14, 24, 28);
       ctx.fillStyle = "#7ed957";
@@ -5783,7 +5779,7 @@
     ctx.fillText("PLECAK", panelX + 24, panelY + 40);
     ctx.font = "700 12px Inter, system-ui, sans-serif";
     ctx.fillStyle = "rgba(245, 238, 209, 0.6)";
-    ctx.fillText("[I] lub [ESC] zamyka   •   przedmioty zostaja w plecaku", panelX + 132, panelY + 40);
+    ctx.fillText("[I] lub [ESC] zamyka plecak", panelX + 132, panelY + 40);
 
     if (!game.items.length) {
       ctx.fillStyle = "rgba(245, 238, 209, 0.6)";
@@ -5961,7 +5957,7 @@
     ctx.fillRect(size.w / 2 - 160, size.h / 2 + 34, 320 * progress, 4);
     ctx.font = "800 14px Inter, system-ui, sans-serif";
     ctx.fillStyle = "rgba(245, 238, 209, 0.78)";
-    ctx.fillText(progress >= 1 ? "las oddycha bez maszyn" : "ostatnia kreska wraca na miejsce", size.w / 2, size.h / 2 + 72);
+    ctx.fillText(progress >= 1 ? "natura została uwolniona od maszyn" : "świat na nowo odżywa", size.w / 2, size.h / 2 + 72);
     ctx.restore();
   }
 
@@ -6072,14 +6068,14 @@
     const rows = [
       ["WASD", "ruch (lub strzalki)"],
       ["SHIFT / B", "bieg (nie w wodzie)"],
-      ["SPACJA", "rozmowa / gryzienie"],
-      ["J", "podnies / poloz deske"],
-      ["K", "rzut deska (atak na odleglosc)"],
-      ["L", "nakarm zdrowe zwierze"],
+      ["SPACJA", "rozmowa / gryzienie / atak"],
+      ["J", "podnieś / połóż deskę"],
+      ["K", "rzut deską (atak na odległość)"],
+      ["L", "nakarm zwierzę"],
       ["I", "plecak"],
-      ["E", "wejdz / wyjdz z nory"],
-      ["M", "dzwiek wl / wy"],
-      ["ESC / P", "wroc do gry"],
+      ["E", "wejdź / wyjdź z nory"],
+      ["M", "dźwięk włącz / wyłącz"],
+      ["ESC / P", "wroć do gry"],
       ["R", "zacznij od nowa"]
     ];
 
@@ -6133,7 +6129,7 @@
     drawLogo(cx, panelY - 96, 1);
     ctx.font = "700 15px Inter, system-ui, sans-serif";
     ctx.fillStyle = "rgba(245, 238, 209, 0.72)";
-    ctx.fillText("wolny jak wiatr, cichy jak mech", cx, panelY - 62);
+    ctx.fillText("Uwolnij świat", cx, panelY - 62);
 
     ctx.fillStyle = "rgba(13, 18, 16, 0.72)";
     ctx.fillRect(panelX, panelY + 14, panelW, panelH);
@@ -6149,15 +6145,15 @@
     const rows = [
       ["WASD", "ruch (lub strzalki)"],
       ["SHIFT / B", "bieg (nie w wodzie)"],
-      ["SPACJA", "rozmowa / gryzienie"],
-      ["J", "podnies / poloz deske"],
-      ["K", "rzut deska (atak na odleglosc)"],
-      ["L", "nakarm zdrowe zwierze"],
+      ["SPACJA", "rozmowa / gryzienie / atak"],
+      ["J", "podnieś / połóż deskę"],
+      ["K", "rzut deską (atak na odległość)"],
+      ["L", "nakarm zwierzę"],
       ["I", "plecak"],
-      ["E", "wejdz / wyjdz z nory"],
-      ["M", "dzwiek wl / wy"],
-      ["ESC / P", "pauza"],
-      ["R", "od nowa"]
+      ["E", "wejdź / wyjdź z nory"],
+      ["M", "dźwięk włącz / wyłącz"],
+      ["ESC / P", "wroć do gry"],
+      ["R", "zacznij od nowa"]
     ];
 
     drawControlRows(panelX, panelY + 66, panelW, rows);
