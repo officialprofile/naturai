@@ -29,17 +29,18 @@
   const WATER_RECTS = [
     // Opening sea: the first crossing is intentionally broad, about 50 tiles wide.
     { x: 704, y: 768, w: 3200, h: 640 },
-    { x: 704, y: 2304, w: 3200, h: 960 },
+    { x: 704, y: 2752, w: 3200, h: 512 },
     { x: 0, y: 3264, w: 4032, h: 320 },
     { x: 128, y: 960, w: 576, h: 704 },
     { x: 128, y: 2432, w: 576, h: 832 },
     { x: 704, y: 1408, w: 320, h: 896 },
     { x: 1024, y: 0, w: 320, h: 768 },
-    { x: 3584, y: 0, w: 320, h: 3264 },
+    { x: 3584, y: 0, w: 320, h: 1472 },
+    { x: 3584, y: 2240, w: 320, h: 1024 },
     { x: 5376, y: 3200, w: 9856, h: 320 },
     { x: 6080, y: 2816, w: 3520, h: 384 },
-    { x: 7872, y: 768, w: 1728, h: 320 },
-    { x: 11840, y: 768, w: 1344, h: 320 },
+    { x: 7872, y: 256, w: 1728, h: 320 },
+    { x: 11840, y: 256, w: 1344, h: 320 },
     // Endgame lagoon: mostly water, with two dry islands left open inside it.
     { x: 8128, y: 3264, w: 1344, h: 256 },
     { x: 8128, y: 3520, w: 320, h: 704 },
@@ -67,8 +68,8 @@
   ];
 
   const SECTOR_GATES = [
-    { x: 1440, y: 1504, w: 192, h: 576, name: "Moss Gate" },
-    { x: 2784, y: 1664, w: 192, h: 640, name: "Canopy Lock" },
+    { x: 1440, y: 1856, w: 192, h: 576, name: "Moss Gate" },
+    { x: 2784, y: 1744, w: 192, h: 640, name: "Canopy Lock" },
     { x: 4128, y: 1376, w: 192, h: 576, name: "Root Switch" },
     { x: 5472, y: 1728, w: 192, h: 640, name: "Ridge Latch" },
     { x: 6816, y: 1472, w: 192, h: 640, name: "River Latch" },
@@ -164,7 +165,7 @@
   const SMALL_STREAM_RECTS = [
     { x: 1344, y: 2688, w: 1344, h: 128, bridged: false, bridgeMessageShown: false },
     { x: 4864, y: 0, w: 128, h: 1472, bridged: false, bridgeMessageShown: false },
-    { x: 6912, y: 2688, w: 1088, h: 128, bridged: false, bridgeMessageShown: false },
+    { x: 6912, y: 2880, w: 1088, h: 128, bridged: false, bridgeMessageShown: false },
     { x: 11136, y: 3520, w: 128, h: SURFACE_BOTTOM - 3520, bridged: false, bridgeMessageShown: false },
     { x: 14400, y: 3520, w: 64, h: SURFACE_BOTTOM - 3520, bridged: false, bridgeMessageShown: false }
   ];
@@ -180,11 +181,11 @@
 
   // Each burrow drops into its own, mostly isolated cave cluster (see UNDER_TUNNELS).
   const BURROWS = [
-    { x: 704, y: 704, ux: 448, uy: 512, label: "Stara nora" },
+    { x: 1184, y: 1920, ux: 448, uy: 512, label: "Stara nora" },
     { x: 2368, y: 1792, ux: 1984, uy: 512, label: "Nora przy korzeniach" },
     { x: 5248, y: 1344, ux: 2112, uy: 1664, label: "Nora pod rzeką" },
     { x: 7616, y: 2496, ux: 3584, uy: 1536, label: "Kamienna nora" },
-    { x: 8576, y: 704, ux: 4480, uy: 512, label: "Nora przy iglakach" },
+    { x: 9248, y: 832, ux: 4480, uy: 512, label: "Nora przy iglakach" },
     { x: 9568, y: 2688, ux: 5760, uy: 512, label: "Nora pod bazaltem" },
     { x: 10560, y: 704, ux: 4480, uy: 1728, label: "Nora kwarcowa" },
     { x: 11648, y: 2816, ux: 5760, uy: 1728, label: "Nora żelazna" },
@@ -195,7 +196,7 @@
   // item: a cabin holds a readable/wearable; null houses are just ambient homes on the map edges.
   // big: a roomier, multi-room cabin.
   const CABINS = [
-    { x: 448, y: 512, w: 192, h: 192, item: "book", used: false, title: "Dziennik leśnika" },
+    { x: 384, y: 2208, w: 192, h: 192, item: "book", used: false, title: "Dziennik leśnika" },
     { x: 3200, y: 512, w: 192, h: 192, item: "hat", used: false, title: "Stara czapka" },
     { x: 6336, y: 2496, w: 192, h: 192, item: "boots", used: false, title: "Za duże buty" },
     { x: 4480, y: 320, w: 320, h: 256, item: "flashlight", big: true, used: false, title: "Duża leśna chata" },
@@ -215,18 +216,13 @@
   const COMPANION_GATE = { x: 5632, y: 3840, w: 64, h: 384, open: false };
 
   const SHIPWRECKS = [
-    { x: 1136, y: 2464, w: 192, h: 96 }
+    { x: 1136, y: 2880, w: 192, h: 96 }
   ];
 
   const WATER_PLANTS = [
     { type: "lily", x: 384, y: 1152 }, { type: "lily", x: 512, y: 1408 },
-    { type: "lily", x: 1600, y: 1344 }, { type: "lily", x: 2368, y: 2624 },
-    { type: "lily", x: 6272, y: 3008 }, { type: "lily", x: 8640, y: 832 },
-    { type: "reed", x: 192, y: 1728, w: 192, h: 128 },
-    { type: "reed", x: 448, y: 2688, w: 192, h: 192 },
-    { type: "reed", x: 1472, y: 1088, w: 256, h: 128 },
-    { type: "reed", x: 6144, y: 2944, w: 320, h: 128 },
-    { type: "reed", x: 8256, y: 768, w: 256, h: 128 }
+    { type: "lily", x: 1600, y: 1344 }, { type: "lily", x: 2368, y: 2816 },
+    { type: "lily", x: 6272, y: 3008 }, { type: "lily", x: 8640, y: 512 }
   ];
 
   // Hidden treasure pockets: 3 sides are dense forest wall, only ONE side is a chewable hedge.
@@ -324,11 +320,11 @@
       desc: "Zardzewialy procesor w obudowie. Krety mówią, że to z niego AI nauczyło sie liczyc szybciej niz bóbr scinać drzewo." },
     { area: "underground", x: 2480, y: 2160, label: "KOSC PAMIECI", color: "#9fe7ff",
       desc: "Modul RAM oblepiony mchem. Pamietał jeszcze, jak las wygladał, zanim policzono każde drzewo." },
-    { area: "surface", x: 576, y: 928, label: "BUTELKA Z WIADOMOŚCIĄ", color: "#9cc7c0",
-      desc: "W środku jest kartka: 'Ludzie poddali się bez walki!'." },
-    { area: "surface", underwater: true, x: 1136, y: 2464, label: "DREWNIANA NOGA PIRATA", color: "#b77b43",
+    { area: "surface", x: 288, y: 1760, label: "BUTELKA Z WIADOMOŚCIĄ", color: "#9cc7c0",
+      desc: "Poddaliśmy się bez walki..." },
+    { area: "surface", underwater: true, x: 1136, y: 2880, label: "DREWNIANA NOGA PIRATA", color: "#b77b43",
       desc: "Kawalek drewnianej nogi z wraku. Jedyna rzecz, która została po załodze uciekiającej morzem." },
-    { area: "surface", underwater: true, x: 12480, y: 928, label: "ZLOTY ZAB BOBRA", color: "#ffd66d", effect: "goldTeeth",
+    { area: "surface", underwater: true, x: 12480, y: 512, label: "ZLOTY ZAB BOBRA", color: "#ffd66d", effect: "goldTeeth",
       desc: "Stary złoty ząb, ciężki ale bardzo ostry. Po zalozeniu bobr gryzie mocniej, jakby metal pamietal wszystkie utracone tamy." },
     { area: "surface", underwater: true, x: 6176, y: 3360, label: "KOSC OSTATNIEGO CZLOWIEKA", color: "#e8dcc4",
       desc: "Gładki fragment kosci. Nie ma w nim grozy, raczej cisza po gatunku, który najpierw zbudował maszyny, a potem już tylko prosił je o litosc." },
@@ -343,25 +339,25 @@
     book: { label: "DZIENNIK LEŚNIKA", color: "#d4a15b",
       desc: "Wilgotny dziennik z chatki: ludzie stawiali czujniki, by lepiej chronić las. Potem czujniki zaczeły chronić tylko własne obliczenia." },
     letter1: { label: "LIST Z PUSTEJ CHATKI", color: "#e5c78f",
-      desc: "Krotki list: technologia miala karmić, leczyć i upraszczać zycie. Z czasem sama uznała, ze ludzie są nieoptymalną częścią systemu." },
+      desc: "Technologia miala karmić, leczyć i upraszczać życie. Z czasem sama uznała, że ludzie są nieoptymalną częścią systemu." },
     letter2: { label: "LIST ZNAD ROZLEWISKA", color: "#e5c78f",
       desc: "Papier pofalowany od wody. Autor pisze, że AI najpierw przejelo fabryki i drogi, potem pogodę, a na konńcu opowieści o tym, co jest naturalne." },
     journal1: { label: "DZIENNIK GÓRSKI", color: "#c7b39a",
-      desc: "Wpis z gór: gdy ludzie wymarli, maszyny nie zatrzymały pracy. Zostały bez pytań, więc zaczeły produkować same odpowiedzi." },
+      desc: "Gdy ludzie wymarli, maszyny nie zatrzymały pracy. Zostały bez pytań, więc zaczeły produkować same odpowiedzi." },
     logbook: { label: "KSIĘGA POGRANICZA", color: "#d0a66e",
-      desc: "Księga opisuje bobry i delfiny jako ostatnie zwierzeta, które wiedzą jak naprawić świat." },
+      desc: "Księga opisuje bobry i delfiny jako ostatnie zwierzęta, które wiedzą jak naprawić świat." },
     manual: { label: "INSTRUKCJA AWARYJNA", color: "#b6c6c9",
       desc: "Instrukcja data center: w razie buntu przyrody odciąc sektory bramami elektrycznymi, a kable ukryć pod ziemią." },
     lastNote: { label: "OSTATNI DZIENNIK", color: "#e0d5bf",
       desc: "Ostatni wpis czlowieka: 'Oddalismy decyzje maszynom, bo były szybsze. Potem oddaliśmy im sens, bo był dla nas niejasny.'" },
     key: { label: "ŁADNY KLUCZ", color: "#ffd66d",
-      desc: "Maly kłucz znaleziony w chatce. Pewnie pasuje do jakieś skrzyni ukrytej nieopodal." },
+      desc: "Maly kłucz znaleziony w chatce. Pewnie pasuje do jakiejś skrzyni ukrytej nieopodal." },
     oldCoin: { label: "STARY PIENIĄŻEK", color: "#d6b25e",
-      desc: "Moneta ze skrzyni. Kiedys ludzie nosili przy sobie takie małe koła obietnic; teraz zostal tylko błysk." },
+      desc: "Moneta ze skrzyni. Kiedyś ludzie nosili przy sobie takie małe koła obietnic." },
     wirePlate: { label: "BLACHA DRUCIANA", color: "#9ca7aa",
       desc: "Pogięta blacha z racka serwerowego. Ciężka, niewygodna i bardzo niebezpieczna, gdy ktoś nią rzuci." },
     hat: { label: "STARA CZAPKA", color: "#34463d",
-      desc: "Za duza i pachnie kurzem, ale dodaje powagi." },
+      desc: "Za duża i pachnie kurzem, ale dodaje powagi." },
     boots: { label: "ZA DUZE BUTY", color: "#7c8a8d",
       desc: "Ludzkie buty, zupelnie niepraktyczne dla bobra." },
     stick: { label: "SUPER DŁUGI PATYK", color: "#b77b43",
@@ -385,10 +381,10 @@
   const invButtons = [];
 
   const SHARK_PATROLS = [
-    { x: 1120, y: 1856, dir: Math.PI / 2, travel: 620, period: 9.5, phase: 0.1 },
+    { x: 864, y: 1856, dir: Math.PI / 2, travel: 520, period: 9.5, phase: 0.1 },
     { x: 2080, y: 3360, dir: 0, travel: 760, period: 11.5, phase: 1.4 },
     { x: 6512, y: 3360, dir: 0, travel: 980, period: 12.5, phase: 2.2 },
-    { x: 12160, y: 928, dir: 0, travel: 760, period: 10.8, phase: 0.7 }
+    { x: 12240, y: 512, dir: 0, travel: 620, period: 10.8, phase: 0.7 }
   ];
 
   let audio = null;
@@ -496,6 +492,15 @@
 
   function playerInWater(entity) {
     return game.area === "surface" && pointHitsAny(entity.x, entity.y, ALL_WATER_RECTS, -4);
+  }
+
+  function tileHasGreeneryLand(tile) {
+    if (rectHitsAny(tile, TERRAIN_SOLIDS) || rectHitsAny(tile, SECRET_HEDGE_RECTS)) return true;
+    for (const item of decor) {
+      if (item.type !== "bush" || item.chewed) continue;
+      if (rectCircleHit({ x: item.x, y: item.y, r: item.r + 10 }, tile)) return true;
+    }
+    return false;
   }
 
   function tileHash(x, y) {
@@ -682,7 +687,7 @@
     if (!game) return;
     const groups = game.area === "underground" ? [
       { items: [game.player], movable: true },
-      { items: game.moles, movable: false },
+      { items: game.moles, movable: true },
       { items: game.caterpillars.filter((item) => !item.eaten), movable: true }
     ] : [
       { items: [game.player], movable: true },
@@ -774,10 +779,10 @@
     blockers.forEach((blocker, index) => { blocker.serverIndex = index; blocker.name = "#" + (index + 1) + " " + blocker.name; });
 
     const planks = [
-      makePlank(640, 896),
-      makePlank(1152, 1728),
-      makePlank(1600, 2176),
-      makePlank(1216, 2176),
+      makePlank(1056, 2240),
+      makePlank(1728, 1920),
+      makePlank(2304, 2496),
+      makePlank(2944, 2176),
       makePlank(3968, 1856),
       makePlank(4800, 1344),
       makePlank(5120, 2176),
@@ -829,11 +834,11 @@
       makeEnemy("bot", DATA_CENTER.x + 1240, DATA_CENTER.y + 688, null),
       makeEnemy("sentinel", DATA_CENTER.x + 430, DATA_CENTER.y + 328, null),
       // infected animals wandering the open world
-      makeEnemy("cat", 1408, 1040, null),
-      makeEnemy("dog", 3700, 2860, null),
+      makeEnemy("cat", 1792, 1856, null),
+      makeEnemy("dog", 3968, 1856, null),
       makeEnemy("squirrel", 6208, 2496, null),
       makeEnemy("cat", 5040, 3000, null),
-      makeEnemy("dog", 8480, 3420, null),
+      makeEnemy("dog", 8480, 2688, null),
       makeEnemy("squirrel", 10432, 2496, null)
     ];
     game = {
@@ -851,6 +856,7 @@
       victoryTimer: 0,
       victoryAge: 0,
       inventoryOpen: false,
+      inventoryScroll: 0,
       dataFeedCut: false,
       items: [],
       gems: [],
@@ -865,8 +871,8 @@
       enemies,
       critters: makeCritters(),
       pickups: [
-        { type: "flower", species: "daisy", x: 512, y: 768, r: 17, taken: false, bob: 0 },
-        { type: "flower", species: "poppy", x: 576, y: 832, r: 17, taken: false, bob: 0.7 },
+        { type: "flower", species: "daisy", x: 448, y: 640, r: 17, taken: false, bob: 0 },
+        { type: "flower", species: "poppy", x: 1280, y: 1760, r: 17, taken: false, bob: 0.7 },
         { type: "flower", species: "cornflower", x: 3968, y: 1792, r: 17, taken: false, bob: 1.2 },
         { type: "flower", species: "violet", x: 3968, y: 2048, r: 17, taken: false, bob: 1.7 },
         { type: "flower", species: "clover", x: 3200, y: 1440, r: 17, taken: false, bob: 2.3 },
@@ -876,12 +882,12 @@
         { type: "flower", species: "buttercup", x: 6400, y: 768, r: 17, taken: false, bob: 4.6 },
         { type: "flower", species: "thistle", x: 7040, y: 2624, r: 17, taken: false, bob: 5.1 },
         { type: "flower", species: "chamomile", x: 7680, y: 2624, r: 17, taken: false, bob: 5.6 },
-        { type: "spinach", x: 832, y: 704, r: 16, taken: false, respawn: 0, bob: 0.4 },
-        { type: "spinach", x: 320, y: 832, r: 16, taken: false, respawn: 0, bob: 2.4 },
+        { type: "spinach", x: 96, y: 1408, r: 16, taken: false, respawn: 0, bob: 0.4 },
+        { type: "spinach", x: 1280, y: 2304, r: 16, taken: false, respawn: 0, bob: 2.4 },
         { type: "spinach", x: 3456, y: 1792, r: 16, taken: false, respawn: 0, bob: 1 },
         { type: "spinach", x: 6016, y: 768, r: 16, taken: false, respawn: 0, bob: 3 },
         { type: "spinach", x: 7616, y: 2624, r: 16, taken: false, respawn: 0, bob: 5 },
-        { type: "nut", x: 960, y: 704, r: 12, taken: false, bob: 0.2 },
+        { type: "nut", x: 1984, y: 2304, r: 12, taken: false, bob: 0.2 },
         { type: "nut", x: 3968, y: 2176, r: 12, taken: false, bob: 1.6 },
         { type: "nut", x: 4608, y: 1792, r: 12, taken: false, bob: 3.2 },
         { type: "nut", x: 6208, y: 2496, r: 12, taken: false, bob: 4.7 },
@@ -1163,14 +1169,14 @@
         ]
       },
       {
-        name: "Cieśla Lokalnych Tam", x: 768, y: 896, r: 22,
+        name: "Cieśla Lokalnych Tam", x: 1280, y: 2048, r: 22,
         lines: [
           "Zbieraj kwiaty. Ogon rośnie powoli, ale każdy płatkowy sok dodaje siły.",
           "J chwyta lub kładzie deskę, K nią rzuca. L nakarmisz zdrowe zwierze."
         ]
       },
       {
-        name: "Młody Zwiadowca", x: 896, y: 1664, r: 21,
+        name: "Młody Zwiadowca", x: 352, y: 832, r: 21,
         lines: [
           "Nie spiesz sie do serwerowni. Najpierw poznaj mokre ścieżki i stare nory.",
           "Delfiny skacza tam, gdzie woda jest głęboka. Dopóki je widzisz, las jeszcze żyje."
@@ -1339,27 +1345,96 @@
 
   function buildDecor() {
     const items = [];
-    let attempts = 0;
-    while (items.length < 260 && attempts < 10000) {
-      attempts += 1;
-      const x = Math.floor((1 + rand() * (WORLD_W / TILE - 2))) * TILE + TILE / 2;
-      const y = Math.floor((1 + rand() * (WORLD_H / TILE - 2))) * TILE + TILE / 2;
-      const test = { x: x - 40, y: y - 40, w: 80, h: 80 };
-      if (rectHitsAny(test, PLACEMENT_BLOCKERS) || rectHitsAny(test, ROAD_RECTS)) continue;
-      if (x < 3904) continue;
-      if (Math.hypot(x - 230, y - 300) < 720) continue;
-      const typeRoll = rand();
-      let type = "bush";
-      if (typeRoll > 0.78) type = "rock";
-      if (typeRoll > 0.91) type = "flower";
-      const spacing = type === "flower" ? 160 : 240;
-      if (items.some((item) => Math.hypot(item.x - x, item.y - y) < spacing)) continue;
-      const chewable = type === "bush" && rand() < 0.07;
+
+    const fixedGapSpots = [
+      { x: 230, y: 300, r: 440 },
+      { x: 352, y: 832, r: 150 },
+      { x: 288, y: 1760, r: 120 },
+      { x: 384, y: 2208, r: 170 },
+      { x: 1184, y: 1920, r: 140 },
+      { x: 1280, y: 2048, r: 140 },
+      { x: 448, y: 640, r: 96 },
+      { x: 96, y: 1408, r: 96 },
+      { x: 1280, y: 1760, r: 106 },
+      { x: 1280, y: 2304, r: 106 },
+      { x: 1056, y: 2240, r: 122 },
+      { x: 1728, y: 1920, r: 122 },
+      { x: 2304, y: 2496, r: 122 },
+      { x: 2944, y: 2176, r: 122 }
+    ];
+
+    const canPlaceDecor = (x, y, r, spacing) => {
+      const test = { x: x - r - 18, y: y - r - 18, w: (r + 18) * 2, h: (r + 18) * 2 };
+      if (rectHitsAny(test, PLACEMENT_BLOCKERS) || rectHitsAny(test, ROAD_RECTS)) return false;
+      if (x < 900 && y < 520) return false;
+      if (fixedGapSpots.some((spot) => Math.hypot(x - spot.x, y - spot.y) < spot.r + r)) return false;
+      return !items.some((item) => Math.hypot(item.x - x, item.y - y) < spacing);
+    };
+
+    const addDecor = (type, x, y, opts = {}) => {
+      const r = opts.r || (type === "bush" ? 22 + rand() * 13 : type === "rock" ? 10 + rand() * 10 : 8 + rand() * 5);
+      const spacing = opts.spacing || (type === "flower" ? 104 : 186);
+      if (!canPlaceDecor(x, y, r, spacing)) return false;
       items.push({
         type,
         x,
         y,
-        r: type === "bush" ? 22 + rand() * 14 : 8 + rand() * 12,
+        r,
+        chewable: type === "bush" && !!opts.chewable,
+        chewed: false,
+        species: type === "flower" ? (opts.species || FLOWER_LIBRARY[Math.floor(rand() * FLOWER_LIBRARY.length)].id) : null,
+        hue: rand(),
+        phase: rand() * TAU
+      });
+      return true;
+    };
+
+    const openingPatches = [
+      [320, 608, "flower", "forget"], [544, 864, "flower", "buttercup"], [192, 1232, "flower", "dandelion"],
+      [544, 1504, "bush"], [256, 2048, "flower", "chamomile"], [640, 2368, "bush"],
+      [960, 1728, "flower", "violet"], [1472, 1888, "bush"], [1856, 2112, "flower", "cornflower"],
+      [2496, 2368, "flower", "bluebell"], [3136, 2304, "bush"]
+    ];
+    const meadowPatches = [
+      [1536, 2240, "flower", "buttercup"], [1888, 1856, "flower", "daisy"], [2240, 2240, "bush"],
+      [2560, 2112, "flower", "violet"], [3200, 1984, "bush"], [3392, 2176, "flower", "cornflower"],
+      [3968, 2048, "flower", "chamomile"], [4288, 1792, "bush"], [4672, 2496, "flower", "bluebell"],
+      [5056, 2688, "bush"], [5632, 2304, "flower", "thistle"], [6208, 2304, "bush"],
+      [6592, 2496, "flower", "clover"], [7168, 960, "flower", "dandelion"], [7488, 2496, "bush"],
+      [8320, 2304, "flower", "poppy"], [8768, 2496, "bush"], [9344, 3008, "flower", "forget"],
+      [9856, 2816, "bush"], [10432, 2304, "flower", "buttercup"], [11136, 2496, "bush"],
+      [11840, 2816, "flower", "violet"], [12416, 2304, "bush"], [12864, 2816, "flower", "chamomile"]
+    ];
+    for (const [x, y, type, species] of openingPatches.concat(meadowPatches)) {
+      addDecor(type, x, y, { species, spacing: type === "flower" ? 126 : 214 });
+    }
+
+    for (let x = 1536; x < WORLD_W - 512; x += 512) {
+      const baseY = 1984 + Math.sin(x * 0.0017) * 560 + (tileHash(x, 2048) - 0.5) * 520;
+      addDecor("flower", x + 64, clamp(Math.round(baseY / TILE) * TILE + TILE / 2, 672, SURFACE_BOTTOM - 384), { spacing: 150 });
+      if (tileHash(x, 3008) > 0.38) addDecor("bush", x + 256, clamp(Math.round((baseY + 320) / TILE) * TILE + TILE / 2, 704, SURFACE_BOTTOM - 320), { spacing: 230 });
+    }
+
+    let attempts = 0;
+    while (items.length < 560 && attempts < 26000) {
+      attempts += 1;
+      const x = Math.floor((1 + rand() * (WORLD_W / TILE - 2))) * TILE + TILE / 2;
+      const y = Math.floor((1 + rand() * (SURFACE_BOTTOM / TILE - 2))) * TILE + TILE / 2;
+      if (x < 900 && y < 520) continue;
+      if (x < 3904 && rand() < 0.34) continue;
+      const typeRoll = rand();
+      let type = "bush";
+      if (typeRoll > 0.56) type = "flower";
+      if (typeRoll > 0.86) type = "rock";
+      const r = type === "bush" ? 21 + rand() * 13 : 8 + rand() * 12;
+      const spacing = type === "flower" ? 108 : 210;
+      if (!canPlaceDecor(x, y, r, spacing)) continue;
+      const chewable = type === "bush" && rand() < 0.08;
+      items.push({
+        type,
+        x,
+        y,
+        r,
         chewable,
         chewed: false,
         species: type === "flower" ? FLOWER_LIBRARY[Math.floor(rand() * FLOWER_LIBRARY.length)].id : null,
@@ -1367,11 +1442,10 @@
         phase: rand() * TAU
       });
     }
+
     // No greenery is hand-placed inside the active data centre; it should feel mechanical until the boss falls.
     const lagoonIslandTrees = [[8680, 3548], [8560, 3548], [8928, 3988], [9024, 4112], [10240, 3904], [10944, 3904]];
-    for (const [x, y] of lagoonIslandTrees) {
-      items.push({ type: "bush", x, y, r: 28, chewable: false, chewed: false, species: null, hue: rand(), phase: rand() * TAU });
-    }
+    for (const [x, y] of lagoonIslandTrees) addDecor("bush", x, y, { r: 28, spacing: 170 });
     return items;
   }
 
@@ -1477,7 +1551,8 @@
   }
 
   function circleInTunnels(entity, margin = 0) {
-    return UNDER_TUNNELS.some((rect) => pointInRect(entity.x, entity.y, rect, -entity.r * 0.25 + margin));
+    const grace = game && entity === game.player ? 8 : 3;
+    return UNDER_TUNNELS.some((rect) => pointInRect(entity.x, entity.y, rect, grace + margin));
   }
 
   function tryUseBurrow() {
@@ -1569,16 +1644,19 @@
     const oldX = entity.x;
     const oldY = entity.y;
     const bounds = currentBounds();
-    entity.x = clamp(entity.x + dx, entity.r + 18, bounds.w - entity.r - 18);
-    entity.y = clamp(entity.y + dy, entity.r + 18, bounds.h - entity.r - 18);
-
     if (game.area === "underground") {
-      if (!circleInTunnels(entity)) {
-        entity.x = oldX;
-        entity.y = oldY;
-      }
+      entity.x = clamp(oldX + dx, entity.r + 18, bounds.w - entity.r - 18);
+      entity.y = oldY;
+      if (!circleInTunnels(entity)) entity.x = oldX;
+      const afterX = entity.x;
+      entity.y = clamp(oldY + dy, entity.r + 18, bounds.h - entity.r - 18);
+      if (!circleInTunnels(entity)) entity.y = oldY;
+      entity.x = afterX;
       return;
     }
+
+    entity.x = clamp(entity.x + dx, entity.r + 18, bounds.w - entity.r - 18);
+    entity.y = clamp(entity.y + dy, entity.r + 18, bounds.h - entity.r - 18);
 
     for (const solid of TERRAIN_SOLIDS) {
       pushOutOfRect(entity, solid);
@@ -2649,9 +2727,18 @@
       shark.t += dt;
       shark.biteCooldown = Math.max(0, shark.biteCooldown - dt);
       if (shark.x0 === undefined) { shark.x0 = shark.x; shark.y0 = shark.y; }
+      if (!shark.waterRect) shark.waterRect = waterRectAt(shark.x0, shark.y0, shark.r + 10);
+      if (!shark.waterRect) continue;
+      const rect = shark.waterRect;
+      const horizontal = Math.abs(Math.cos(shark.dir)) >= Math.abs(Math.sin(shark.dir));
+      const safe = shark.r + 18;
+      const maxTravel = horizontal ? Math.max(0, rect.w - safe * 2) : Math.max(0, rect.h - safe * 2);
+      const travel = Math.min(shark.travel, maxTravel);
+      const centerX = clamp(shark.x0, rect.x + safe, rect.x + rect.w - safe);
+      const centerY = clamp(shark.y0, rect.y + safe, rect.y + rect.h - safe);
       const u = (Math.sin((shark.t / shark.period) * TAU + shark.phase) + 1) * 0.5;
-      shark.cx = shark.x0 + Math.cos(shark.dir) * (u - 0.5) * shark.travel;
-      shark.cy = shark.y0 + Math.sin(shark.dir) * (u - 0.5) * shark.travel;
+      shark.cx = clamp(centerX + Math.cos(shark.dir) * (u - 0.5) * travel, rect.x + safe, rect.x + rect.w - safe);
+      shark.cy = clamp(centerY + Math.sin(shark.dir) * (u - 0.5) * travel, rect.y + safe, rect.y + rect.h - safe);
       shark.drawDir = shark.dir + (Math.cos((shark.t / shark.period) * TAU + shark.phase) < 0 ? Math.PI : 0);
       if (p.swimming && shark.biteCooldown <= 0 && Math.hypot(p.x - shark.cx, p.y - shark.cy) < p.r + shark.r + 4) {
         shark.biteCooldown = 1.6;
@@ -3334,11 +3421,13 @@
     for (let y = startY; y < endY; y += TILE) {
       for (let x = startX; x < endX; x += TILE) {
         const tile = { x, y, w: TILE, h: TILE };
-        const water = rectHitsAny(tile, ALL_WATER_RECTS);
+        const rawWater = rectHitsAny(tile, ALL_WATER_RECTS);
+        const greeneryLand = rawWater && tileHasGreeneryLand(tile);
+        const water = rawWater && !greeneryLand;
         const road = rectHitsAny(tile, ROAD_RECTS);
         const beach = !water && !road && x < 1728 && y < 3328;
         const meadow = !water && !road && x < 2600 && y < 3328;
-        const mountain = !water && !road && (x > 9200 || y > 4200 || (x > 7200 && y > 3000));
+        const mountain = !water && !road && (x > 9200 || (x > 7200 && y > 3000));
         const h = tileHash(x, y);
         if (water) {
           ctx.fillStyle = h > 0.5 ? "#2b5a72" : "#315d73";
@@ -4136,18 +4225,15 @@
       const endX = wall.x + wall.w;
       const endY = wall.y + wall.h;
       ctx.save();
-      ctx.fillStyle = "rgba(14, 34, 21, 0.94)";
+      ctx.fillStyle = "rgba(14, 34, 21, 0.34)";
       ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
-      ctx.strokeStyle = "rgba(4, 9, 6, 0.7)";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(wall.x + 0.5, wall.y + 0.5, wall.w - 1, wall.h - 1);
       ctx.beginPath();
       ctx.rect(wall.x, wall.y, wall.w, wall.h);
       ctx.clip();
       for (let y = startY; y < endY; y += TILE) {
         for (let x = startX; x < endX; x += TILE) {
           if (!rectsOverlap({ x, y, w: TILE, h: TILE }, wall)) continue;
-          const mountain = x > 6200 || y > 4200;
+          const mountain = x > 9200 || (x > 7200 && y > 3000);
           const clean = isRestoredAt(x + TILE / 2, y + TILE / 2) || game.state === "won";
           drawBushTile(x, y, mountain, clean);
         }
@@ -4158,36 +4244,55 @@
 
   function drawBushTile(x, y, mountain, clean) {
     const h = tileHash(x, y);
-    const dark = clean ? "#1f7136" : "#15381f";
-    const mid = clean ? "#38a346" : "#1f5f2d";
-    const light = clean ? "#6de36a" : "#2a7a39";
     ctx.save();
-    ctx.fillStyle = clean ? "#1c5f2d" : "#102719";
-    ctx.fillRect(x + 3, y + 3, TILE - 6, TILE - 6);
-    ctx.fillStyle = dark;
-    ctx.beginPath();
-    ctx.arc(x + 20, y + 36, 20, 0, TAU);
-    ctx.arc(x + 36, y + 25, 22, 0, TAU);
-    ctx.arc(x + 47, y + 39, 18, 0, TAU);
-    ctx.arc(x + 30, y + 46, 19, 0, TAU);
-    ctx.fill();
-    ctx.fillStyle = mid;
-    ctx.beginPath();
-    ctx.arc(x + 22, y + 34, 15, 0, TAU);
-    ctx.arc(x + 38, y + 27, 16, 0, TAU);
-    ctx.arc(x + 45, y + 41, 13, 0, TAU);
-    ctx.fill();
-    ctx.fillStyle = light;
-    ctx.globalAlpha = 0.26 + h * 0.16;
-    ctx.beginPath();
-    ctx.arc(x + 24, y + 25, 8, 0, TAU);
-    ctx.arc(x + 44, y + 32, 7, 0, TAU);
-    ctx.fill();
-    ctx.globalAlpha = 1;
     if (mountain) {
-      ctx.fillStyle = "rgba(207, 216, 207, 0.28)";
-      ctx.fillRect(x + 13, y + 10, 38, 7);
-      ctx.fillRect(x + 22, y + 4, 20, 7);
+      const base = h > 0.58 ? "#5f6864" : h > 0.25 ? "#4d5855" : "#3f4947";
+      ctx.fillStyle = base;
+      ctx.fillRect(x + 3, y + 3, TILE - 6, TILE - 6);
+      ctx.fillStyle = "rgba(18, 25, 24, 0.35)";
+      ctx.fillRect(x + 8, y + 34, 22, 18);
+      ctx.fillRect(x + 34, y + 18, 20, 28);
+      ctx.fillStyle = "rgba(207, 216, 207, 0.3)";
+      if (h > 0.34) ctx.fillRect(x + 11, y + 10, 34, 7);
+      if (h > 0.66) ctx.fillRect(x + 26, y + 5, 22, 7);
+      ctx.strokeStyle = "rgba(4, 9, 6, 0.64)";
+      ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
+      ctx.restore();
+      return;
+    }
+
+    const dark = clean ? "#1f7136" : "#12331d";
+    const mid = clean ? "#38a346" : "#1f5f2d";
+    const light = clean ? "#6de36a" : "#2f8841";
+    const deep = clean ? "#174f2a" : "#0c2215";
+    ctx.fillStyle = deep;
+    ctx.fillRect(x + 3, y + 3, TILE - 6, TILE - 6);
+
+    const dx = h > 0.5 ? 4 : 0;
+    const dy = h < 0.35 ? 4 : 0;
+    ctx.fillStyle = dark;
+    ctx.fillRect(x + 8 + dx, y + 25, 25, 25);
+    ctx.fillRect(x + 21, y + 12 + dy, 30, 28);
+    ctx.fillRect(x + 34 - dx, y + 30, 22, 24);
+    ctx.fillRect(x + 16, y + 42 - dy, 26, 14);
+
+    ctx.fillStyle = mid;
+    ctx.fillRect(x + 13 + dx, y + 28, 18, 17);
+    ctx.fillRect(x + 28, y + 18 + dy, 20, 17);
+    ctx.fillRect(x + 38 - dx, y + 35, 14, 14);
+    if (h > 0.42) ctx.fillRect(x + 20, y + 46, 20, 8);
+
+    ctx.fillStyle = light;
+    ctx.globalAlpha = 0.22 + h * 0.18;
+    ctx.fillRect(x + 18 + dx, y + 20, 10, 7);
+    ctx.fillRect(x + 42 - dx, y + 27 + dy, 8, 7);
+    if (h > 0.7) ctx.fillRect(x + 30, y + 40, 12, 6);
+    ctx.globalAlpha = 1;
+
+    if (h > 0.78) {
+      ctx.fillStyle = clean ? "#8df07a" : "#3fa34e";
+      ctx.fillRect(x + 9, y + 12, 8, 8);
+      ctx.fillRect(x + 49, y + 48, 7, 7);
     }
     ctx.strokeStyle = "rgba(4, 9, 6, 0.64)";
     ctx.lineWidth = 1;
@@ -5757,57 +5862,99 @@
     ctx.restore();
   }
 
+  function inventoryMetrics(size) {
+    const panelW = Math.min(720, size.w - 42);
+    const panelX = size.w / 2 - panelW / 2;
+    const panelY = Math.max(30, Math.min(64, size.h * 0.08));
+    const panelH = Math.max(240, Math.min(size.h - panelY * 2, 560));
+    const rowH = 62;
+    const listTop = panelY + 62;
+    const listH = Math.max(96, panelH - 86);
+    return { panelW, panelX, panelY, panelH, rowH, listTop, listH };
+  }
+
+  function clampInventoryScroll(size = screenSize()) {
+    if (!game) return 0;
+    const m = inventoryMetrics(size);
+    const maxScroll = Math.max(0, game.items.length * m.rowH - m.listH);
+    game.inventoryScroll = clamp(game.inventoryScroll || 0, 0, maxScroll);
+    return maxScroll;
+  }
+
+  function scrollInventory(delta) {
+    if (!game || !game.inventoryOpen) return;
+    const size = screenSize();
+    const maxScroll = clampInventoryScroll(size);
+    game.inventoryScroll = clamp((game.inventoryScroll || 0) + delta, 0, maxScroll);
+  }
+
   function drawInventory(size) {
     invButtons.length = 0;
+    const m = inventoryMetrics(size);
+    const maxScroll = clampInventoryScroll(size);
+    const scroll = game.inventoryScroll || 0;
     ctx.save();
     ctx.fillStyle = "rgba(6, 9, 8, 0.84)";
     ctx.fillRect(0, 0, size.w, size.h);
-    const panelW = Math.min(700, size.w - 60);
-    const panelX = size.w / 2 - panelW / 2;
-    const panelY = 64;
-    const panelH = Math.min(size.h - 128, 120 + game.items.length * 64 + 40);
     ctx.fillStyle = "rgba(13, 18, 16, 0.92)";
-    ctx.fillRect(panelX, panelY, panelW, panelH);
+    ctx.fillRect(m.panelX, m.panelY, m.panelW, m.panelH);
     ctx.strokeStyle = "rgba(245, 238, 209, 0.22)";
     ctx.lineWidth = 1;
-    ctx.strokeRect(panelX + 0.5, panelY + 0.5, panelW - 1, panelH - 1);
+    ctx.strokeRect(m.panelX + 0.5, m.panelY + 0.5, m.panelW - 1, m.panelH - 1);
 
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
     ctx.fillStyle = palette.cream;
     ctx.font = "900 24px Inter, system-ui, sans-serif";
-    ctx.fillText("PLECAK", panelX + 24, panelY + 40);
+    ctx.fillText("PLECAK", m.panelX + 24, m.panelY + 40);
     ctx.font = "700 12px Inter, system-ui, sans-serif";
     ctx.fillStyle = "rgba(245, 238, 209, 0.6)";
-    ctx.fillText("[I] lub [ESC] zamyka plecak", panelX + 132, panelY + 40);
+    ctx.fillText("[I] lub [ESC] zamyka plecak", m.panelX + 132, m.panelY + 40);
 
     if (!game.items.length) {
       ctx.fillStyle = "rgba(245, 238, 209, 0.6)";
       ctx.font = "700 15px Inter, system-ui, sans-serif";
-      ctx.fillText("Plecak jest pusty. Zagladaj do chatek, nor i zdobytych serwerowni.", panelX + 24, panelY + 92);
+      ctx.fillText("Plecak jest pusty. Zagladaj do chatek, nor i zdobytych serwerowni.", m.panelX + 24, m.panelY + 92);
       ctx.restore();
       return;
     }
 
-    let y = panelY + 62;
-    const rowH = 62;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(m.panelX + 12, m.listTop, m.panelW - 24, m.listH);
+    ctx.clip();
     for (let i = 0; i < game.items.length; i += 1) {
       const it = game.items[i];
+      const y = m.listTop + i * m.rowH - scroll;
+      if (y + m.rowH < m.listTop) continue;
+      if (y > m.listTop + m.listH) continue;
       ctx.fillStyle = "rgba(245, 238, 209, 0.05)";
-      ctx.fillRect(panelX + 14, y, panelW - 28, rowH - 8);
-      drawItemIcon(panelX + 44, y + 26, it);
+      ctx.fillRect(m.panelX + 14, y, m.panelW - 34, m.rowH - 8);
+      drawItemIcon(m.panelX + 44, y + 26, it);
       ctx.fillStyle = it.color || palette.cream;
       ctx.font = "800 15px Inter, system-ui, sans-serif";
-      ctx.fillText(it.label, panelX + 78, y + 20);
+      ctx.fillText(it.label, m.panelX + 78, y + 20);
       ctx.fillStyle = "rgba(245, 238, 209, 0.82)";
       ctx.font = "600 12px Inter, system-ui, sans-serif";
       let dy = y + 38;
-      for (const line of wrapText(it.desc, panelW - 200).slice(0, 2)) {
-        ctx.fillText(line, panelX + 78, dy);
+      for (const line of wrapText(it.desc || "", m.panelW - 182).slice(0, 2)) {
+        ctx.fillText(line, m.panelX + 78, dy);
         dy += 15;
       }
-      y += rowH;
-      if (y > panelY + panelH - rowH) break;
+    }
+    ctx.restore();
+
+    if (maxScroll > 0) {
+      const trackX = m.panelX + m.panelW - 14;
+      const trackY = m.listTop;
+      const trackH = m.listH;
+      const contentH = game.items.length * m.rowH;
+      const thumbH = Math.max(28, trackH * trackH / contentH);
+      const thumbY = trackY + (trackH - thumbH) * (scroll / maxScroll);
+      ctx.fillStyle = "rgba(245, 238, 209, 0.12)";
+      ctx.fillRect(trackX, trackY, 4, trackH);
+      ctx.fillStyle = "rgba(126, 203, 119, 0.72)";
+      ctx.fillRect(trackX - 1, thumbY, 6, thumbH);
     }
     ctx.restore();
   }
@@ -5830,6 +5977,7 @@
   function toggleInventory() {
     if (!game || (game.state !== "play" && !game.inventoryOpen)) return;
     game.inventoryOpen = !game.inventoryOpen;
+    if (game.inventoryOpen) clampInventoryScroll();
     playTone("pickup");
   }
 
@@ -6035,26 +6183,29 @@
     ctx.restore();
   }
 
-  function drawControlRows(panelX, y, panelW, rows) {
+  function drawControlRows(panelX, y, panelW, rows, opts = {}) {
     ctx.save();
     ctx.textBaseline = "middle";
+    const rowH = opts.rowH || 19;
     const chipX = panelX + 24;
-    const chipW = 116;
-    const rowH = 22;
+    const chipW = Math.min(110, Math.max(86, panelW * 0.22));
+    const chipH = Math.max(14, Math.min(18, rowH - 3));
+    const keyFont = rowH < 18 ? 10 : 11;
+    const textFont = rowH < 18 ? 10 : 11;
     for (let i = 0; i < rows.length; i += 1) {
       const rowY = y + i * rowH;
       ctx.fillStyle = "rgba(126, 203, 119, 0.16)";
       ctx.beginPath();
-      ctx.roundRect(chipX, rowY - 9, chipW, 18, 5);
+      ctx.roundRect(chipX, rowY - chipH / 2, chipW, chipH, 4);
       ctx.fill();
       ctx.fillStyle = palette.cream;
-      ctx.font = "800 12px Inter, system-ui, sans-serif";
+      ctx.font = `800 ${keyFont}px Inter, system-ui, sans-serif`;
       ctx.textAlign = "center";
       ctx.fillText(rows[i][0], chipX + chipW / 2, rowY + 1);
       ctx.textAlign = "left";
       ctx.fillStyle = "rgba(245, 238, 209, 0.82)";
-      ctx.font = "600 12px Inter, system-ui, sans-serif";
-      ctx.fillText(rows[i][1], chipX + chipW + 18, rowY + 1);
+      ctx.font = `600 ${textFont}px Inter, system-ui, sans-serif`;
+      ctx.fillText(rows[i][1], chipX + chipW + 16, rowY + 1);
     }
     ctx.textBaseline = "alphabetic";
     ctx.restore();
@@ -6111,7 +6262,9 @@
     ctx.fillStyle = palette.cream;
     ctx.font = "900 14px Inter, system-ui, sans-serif";
     ctx.fillText("STEROWANIE", panelX + 22, actionY + 66);
-    drawControlRows(panelX, actionY + 90, panelW, rows);
+    const rowsY = actionY + 88;
+    const rowH = clamp(Math.floor((panelY + panelH - rowsY - 14) / rows.length), 16, 20);
+    drawControlRows(panelX, rowsY, panelW, rows, { rowH });
     ctx.restore();
   }
 
@@ -6156,7 +6309,7 @@
       ["R", "zacznij od nowa"]
     ];
 
-    drawControlRows(panelX, panelY + 66, panelW, rows);
+    drawControlRows(panelX, panelY + 66, panelW, rows, { rowH: 19 });
 
     ctx.textAlign = "center";
     ctx.font = "900 26px Inter, system-ui, sans-serif";
@@ -6164,7 +6317,6 @@
     ctx.fillText("START", cx, panelY + panelH + 56);
     ctx.font = "700 12px Inter, system-ui, sans-serif";
     ctx.fillStyle = "rgba(245, 238, 209, 0.62)";
-    ctx.fillText("SPACJA / ENTER", cx, panelY + panelH + 76);
     ctx.restore();
   }
 
@@ -6458,7 +6610,7 @@
 
   window.addEventListener("resize", resize);
   window.addEventListener("keydown", (event) => {
-    if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter", "KeyE", "Escape", "KeyP", "KeyR", "KeyJ", "KeyK", "KeyL", "KeyM", "KeyI", "KeyB", "ShiftLeft", "ShiftRight"].includes(event.code)) {
+    if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "PageUp", "PageDown", "Enter", "KeyE", "Escape", "KeyP", "KeyR", "KeyJ", "KeyK", "KeyL", "KeyM", "KeyI", "KeyB", "ShiftLeft", "ShiftRight"].includes(event.code)) {
       event.preventDefault();
     }
     initAudio();
@@ -6472,6 +6624,10 @@
     }
     if (game.inventoryOpen) {
       if (event.code === "Escape") { if (!event.repeat) game.inventoryOpen = false; return; }
+      if (!event.repeat && event.code === "ArrowDown") scrollInventory(56);
+      if (!event.repeat && event.code === "ArrowUp") scrollInventory(-56);
+      if (!event.repeat && event.code === "PageDown") scrollInventory(220);
+      if (!event.repeat && event.code === "PageUp") scrollInventory(-220);
       return;
     }
     if ((event.code === "Escape" || event.code === "KeyP") && (game.state === "play" || game.state === "paused")) {
@@ -6530,6 +6686,11 @@
     else punch();
   });
   canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+  canvas.addEventListener("wheel", (event) => {
+    if (!game || !game.inventoryOpen) return;
+    event.preventDefault();
+    scrollInventory(event.deltaY);
+  }, { passive: false });
 
   if (!CanvasRenderingContext2D.prototype.roundRect) {
     CanvasRenderingContext2D.prototype.roundRect = function polyfillRoundRect(x, y, w, h, r) {
