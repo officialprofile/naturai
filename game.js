@@ -66,16 +66,6 @@
   ];
 
   const FOREST_WALL_RECTS = [
-    { x: 0, y: 0, w: WORLD_W, h: 256 },
-    { x: 0, y: SURFACE_BOTTOM, w: WORLD_W, h: 256 },
-    { x: 0, y: 256, w: 128, h: SURFACE_BOTTOM - 256 },
-    { x: WORLD_W - 128, y: 256, w: 128, h: SURFACE_BOTTOM - 256 },
-    { x: 128, y: 512, w: 896, h: 128 },
-    { x: 128, y: 3456, w: 896, h: 128 },
-    { x: 1344, y: 256, w: 192, h: 960 },
-    { x: 1344, y: 1792, w: 192, h: SURFACE_BOTTOM - 1792 },
-    { x: 2688, y: 256, w: 192, h: 1088 },
-    { x: 2688, y: 1984, w: 192, h: SURFACE_BOTTOM - 1984 },
     { x: 4032, y: 256, w: 192, h: 832 },
     { x: 4032, y: 1664, w: 192, h: SURFACE_BOTTOM - 1664 },
     { x: 5376, y: 256, w: 192, h: 1152 },
@@ -197,11 +187,11 @@
   // big: a roomier, multi-room cabin.
   const CABINS = [
     { x: 704, y: 640, w: 192, h: 192, item: "book", used: false, title: "Dziennik lesnika" },
-    { x: 2496, y: 768, w: 192, h: 192, item: "hat", used: false, title: "Stara czapka" },
+    { x: 3200, y: 768, w: 192, h: 192, item: "hat", used: false, title: "Stara czapka" },
     { x: 6336, y: 2496, w: 192, h: 192, item: "boots", used: false, title: "Za duze buty" },
     { x: 4480, y: 320, w: 320, h: 256, item: "flashlight", big: true, used: false, title: "Duza lesna checza" },
     { x: 320, y: 3616, w: 320, h: 256, item: "letter1", big: true, used: false, title: "List z pustej chatki" },
-    { x: 1600, y: 352, w: 192, h: 192, item: "key", used: false, title: "Domek z kluczem" },
+    { x: 4992, y: 512, w: 192, h: 192, item: "key", used: false, title: "Domek z kluczem" },
     { x: 6976, y: 352, w: 320, h: 256, item: "journal1", big: true, used: false, title: "Domek pod gorami" },
     { x: 8480, y: 3600, w: 192, h: 192, item: "letter2", used: false, title: "Domek za rozlewiskiem" },
     { x: 5632, y: 3584, w: 320, h: 256, item: "logbook", big: true, used: false, title: "Checza na pograniczu" },
@@ -210,7 +200,7 @@
   ];
 
   const CHESTS = [
-    { x: 1792, y: 448, w: 64, h: 64, key: "key", item: "oldCoin", opened: false, title: "Skrzynia za chatka" }
+    { x: 5248, y: 512, w: 64, h: 64, key: "key", item: "oldCoin", opened: false, title: "Skrzynia za chatka" }
   ];
 
   const COMPANION_GATE = { x: 5632, y: 3840, w: 64, h: 384, open: false };
@@ -233,21 +223,21 @@
   // Hidden treasure pockets: 3 sides are dense forest wall, only ONE side is a chewable hedge.
   const SECRET_HEDGE_RECTS = [
     // Pocket A (west) -> elixir, entry by chewing the east hedge
-    { x: 640, y: 1984, w: 64, h: 384, name: "Sekretny zarosl", hp: 5 },
+    { x: 4672, y: 576, w: 64, h: 384, name: "Sekretny zarosl", hp: 5 },
     // Pocket B (north) -> super long stick, entry from the south hedge
     { x: 2048, y: 576, w: 384, h: 64, name: "Sekretny zarosl", hp: 5 },
     // Pocket C (south) -> heart of the forest, entry from the north hedge
-    { x: 2944, y: 3456, w: 384, h: 64, name: "Sekretny zarosl", hp: 5 },
+    { x: 2944, y: 3584, w: 384, h: 64, name: "Sekretny zarosl", hp: 5 },
     // Chest thicket behind the key cabin
-    { x: 1792, y: 512, w: 64, h: 256, name: "Zarosl przy skrzyni", hp: 5 }
+    { x: 5248, y: 512, w: 64, h: 256, name: "Zarosl przy skrzyni", hp: 5 }
   ];
 
   // The 3 closed sides of each secret pocket read as ordinary impassable forest.
   const SECRET_WALL_RECTS = [
-    { x: 256, y: 1984, w: 64, h: 384 }, { x: 256, y: 1984, w: 448, h: 64 }, { x: 256, y: 2304, w: 448, h: 64 },
+    { x: 4288, y: 576, w: 64, h: 384 }, { x: 4288, y: 576, w: 448, h: 64 }, { x: 4288, y: 896, w: 448, h: 64 },
     { x: 2048, y: 256, w: 64, h: 384 }, { x: 2368, y: 256, w: 64, h: 384 },
-    { x: 2944, y: 3456, w: 64, h: 384 }, { x: 3264, y: 3456, w: 64, h: 384 }, { x: 2944, y: 3776, w: 384, h: 64 },
-    { x: 1728, y: 448, w: 64, h: 320 }, { x: 1792, y: 704, w: 192, h: 64 }, { x: 1984, y: 448, w: 64, h: 320 }
+    { x: 2944, y: 3584, w: 64, h: 384 }, { x: 3264, y: 3584, w: 64, h: 384 }, { x: 2944, y: 3904, w: 384, h: 64 },
+    { x: 5184, y: 448, w: 64, h: 320 }, { x: 5248, y: 704, w: 192, h: 64 }, { x: 5440, y: 448, w: 64, h: 320 }
   ];
 
   const UNDER_W = 8192;
@@ -890,7 +880,7 @@
         { type: "flower", species: "buttercup", x: 6400, y: 768, r: 17, taken: false, bob: 4.6 },
         { type: "flower", species: "thistle", x: 7040, y: 2624, r: 17, taken: false, bob: 5.1 },
         { type: "flower", species: "chamomile", x: 7680, y: 2624, r: 17, taken: false, bob: 5.6 },
-        { type: "spinach", x: 704, y: 960, r: 16, taken: false, respawn: 0, bob: 0.4 },
+        { type: "spinach", x: 896, y: 832, r: 16, taken: false, respawn: 0, bob: 0.4 },
         { type: "spinach", x: 320, y: 832, r: 16, taken: false, respawn: 0, bob: 2.4 },
         { type: "spinach", x: 3456, y: 1792, r: 16, taken: false, respawn: 0, bob: 1 },
         { type: "spinach", x: 6016, y: 768, r: 16, taken: false, respawn: 0, bob: 3 },
@@ -900,9 +890,9 @@
         { type: "nut", x: 4608, y: 1792, r: 12, taken: false, bob: 3.2 },
         { type: "nut", x: 6208, y: 2496, r: 12, taken: false, bob: 4.7 },
         { type: "nut", x: 7616, y: 2624, r: 12, taken: false, bob: 5.4 },
-        { type: "elixir", x: 448, y: 2176, r: 15, taken: false, bob: 6.1 },
+        { type: "elixir", x: 4480, y: 768, r: 15, taken: false, bob: 6.1 },
         { type: "stick", x: 2240, y: 416, r: 15, taken: false, bob: 0 },
-        { type: "heart", x: 3136, y: 3648, r: 15, taken: false, bob: 0 }
+        { type: "heart", x: 3136, y: 3776, r: 15, taken: false, bob: 0 }
       ],
       npcs: makeBeaverNpcs(),
       moles: makeMoles(),
@@ -1355,18 +1345,21 @@
   function buildDecor() {
     const items = [];
     let attempts = 0;
-    while (items.length < 620 && attempts < 7000) {
+    while (items.length < 260 && attempts < 10000) {
       attempts += 1;
       const x = Math.floor((1 + rand() * (WORLD_W / TILE - 2))) * TILE + TILE / 2;
       const y = Math.floor((1 + rand() * (WORLD_H / TILE - 2))) * TILE + TILE / 2;
       const test = { x: x - 40, y: y - 40, w: 80, h: 80 };
       if (rectHitsAny(test, PLACEMENT_BLOCKERS) || rectHitsAny(test, ROAD_RECTS)) continue;
-      if (Math.hypot(x - 230, y - 300) < 360) continue;
+      if (x < 3904) continue;
+      if (Math.hypot(x - 230, y - 300) < 720) continue;
       const typeRoll = rand();
       let type = "bush";
-      if (typeRoll > 0.8) type = "rock";
-      if (typeRoll > 0.92) type = "flower";
-      const chewable = type === "bush" && rand() < 0.09;
+      if (typeRoll > 0.78) type = "rock";
+      if (typeRoll > 0.91) type = "flower";
+      const spacing = type === "flower" ? 160 : 240;
+      if (items.some((item) => Math.hypot(item.x - x, item.y - y) < spacing)) continue;
+      const chewable = type === "bush" && rand() < 0.07;
       items.push({
         type,
         x,
@@ -1380,11 +1373,6 @@
       });
     }
     // No greenery is hand-placed inside the active data centre; it should feel mechanical until the boss falls.
-    // a clump of trees on the lake island so it reads as a little wooded isle
-    const islandTrees = [[3280, 2700], [3500, 2740], [3680, 2700], [3400, 2820], [3620, 2820]];
-    for (const [x, y] of islandTrees) {
-      items.push({ type: "bush", x, y, r: 30, chewable: false, chewed: false, species: null, hue: rand(), phase: rand() * TAU });
-    }
     const lagoonIslandTrees = [[8680, 3548], [8560, 3548], [8928, 3988], [9024, 4112], [10240, 3904], [10944, 3904]];
     for (const [x, y] of lagoonIslandTrees) {
       items.push({ type: "bush", x, y, r: 28, chewable: false, chewed: false, species: null, hue: rand(), phase: rand() * TAU });
@@ -1394,7 +1382,7 @@
 
   function buildTerrainDots() {
     const dots = [];
-    for (let i = 0; i < 1400; i += 1) {
+    for (let i = 0; i < 520; i += 1) {
       const x = rand() * WORLD_W;
       const y = rand() * WORLD_H;
       if (pointHitsAny(x, y, PLACEMENT_BLOCKERS, 12) || pointHitsAny(x, y, ROAD_RECTS, 12)) continue;
@@ -1490,7 +1478,7 @@
   }
 
   function currentBounds() {
-    return game.area === "underground" ? { w: UNDER_W, h: UNDER_H } : { w: WORLD_W, h: WORLD_H };
+    return game.area === "underground" ? { w: UNDER_W, h: UNDER_H } : { w: WORLD_W, h: SURFACE_BOTTOM };
   }
 
   function circleInTunnels(entity, margin = 0) {
@@ -4145,39 +4133,8 @@
     }
   }
 
-  function isWorldEdgeWall(wall) {
-    return (wall.x === 0 && wall.y === 0 && wall.w === WORLD_W) ||
-      (wall.x === 0 && wall.y === SURFACE_BOTTOM && wall.w === WORLD_W) ||
-      (wall.x === 0 && wall.w === 128) ||
-      (wall.x === WORLD_W - 128 && wall.w === 128);
-  }
-
-  function drawWorldEdgeWall(wall) {
-    ctx.save();
-    ctx.fillStyle = "#263332";
-    ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
-    const startX = Math.floor(wall.x / TILE) * TILE;
-    const startY = Math.floor(wall.y / TILE) * TILE;
-    const endX = wall.x + wall.w;
-    const endY = wall.y + wall.h;
-    for (let y = startY; y < endY; y += TILE) {
-      for (let x = startX; x < endX; x += TILE) {
-        if (!rectsOverlap({ x, y, w: TILE, h: TILE }, wall)) continue;
-        ctx.fillStyle = (tileHash(x, y) > 0.5) ? "#2f3d3b" : "#202b2a";
-        ctx.fillRect(x, y, TILE, TILE);
-        ctx.strokeStyle = "rgba(245, 238, 209, 0.08)";
-        ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
-      }
-    }
-    ctx.restore();
-  }
-
   function drawForestWalls() {
     for (const wall of TERRAIN_SOLIDS) {
-      if (isWorldEdgeWall(wall)) {
-        drawWorldEdgeWall(wall);
-        continue;
-      }
       const startX = Math.floor(wall.x / TILE) * TILE;
       const startY = Math.floor(wall.y / TILE) * TILE;
       const endX = wall.x + wall.w;
@@ -4769,7 +4726,7 @@
     ctx.lineWidth = 3;
     ctx.strokeRect(blocker.x + 5, blocker.y + 5, blocker.w - 10, blocker.h - 10);
     if (powered) {
-      const blink = Math.floor(game.time * 8) % 2;
+      const blink = Math.floor(game.time * 2) % 2;
       for (let y = blocker.y + 22; y < blocker.y + blocker.h - 22; y += 32) {
         for (let x = blocker.x + 18; x < blocker.x + blocker.w - 18; x += 32) {
           const on = (Math.floor(x / 32) + Math.floor(y / 32) + blink) % 2 === 0;
