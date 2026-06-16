@@ -4,65 +4,117 @@
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d");
 
-  const WORLD_W = 9600;
+  const WORLD_W = 15360;
   const WORLD_H = 6400;
+  const SURFACE_BOTTOM = 4608;
   const DPR_LIMIT = 2;
   const TAU = Math.PI * 2;
   const TILE = 64;
-  const BOSS_X = 9024;
+  const BOSS_X = 14528;
   const BOSS_Y = 2528;
-  const DATA_CENTER = { x: 8000, y: 1152, w: 1472, h: 1984, wall: TILE };
+  const DATA_CENTER = { x: 13248, y: 1152, w: 1856, h: 1984, wall: TILE };
   // Boss sits in its own sealed chamber in the lower-right of the data center.
-  const BOSS_ROOM = { x: 8640, y: 2048, w: 768, h: 960, wall: TILE, doorY: 2336, doorH: 320 };
+  const BOSS_ROOM = { x: 14144, y: 2048, w: 896, h: 960, wall: TILE, doorY: 2336, doorH: 320 };
   // The data center door is sealed by an electric curtain until every outer server room falls.
   const DATA_CURTAIN = { x: DATA_CENTER.x, y: DATA_CENTER.y + TILE * 11, w: TILE, h: TILE * 4 };
   // Glowing core nodes inside the data center hall; destroying all of them makes the boss mortal.
   const BOSS_CORE_DATA = [
-    { x: 8256, y: 1472 },
-    { x: 8256, y: 2560 },
-    { x: 8768, y: 1472 },
-    { x: 9088, y: 1856 }
+    { x: 13504, y: 1472 },
+    { x: 13504, y: 2560 },
+    { x: 13952, y: 1472 },
+    { x: 14336, y: 1856 },
+    { x: 14848, y: 1664 }
   ];
 
   const WATER_RECTS = [
-    { x: 0, y: 3200, w: 9600, h: 320 },
+    { x: 0, y: 3200, w: 4032, h: 320 },
+    { x: 704, y: 1088, w: 320, h: 1856 },
+    { x: 5376, y: 3200, w: 9856, h: 320 },
     { x: 1024, y: 0, w: 320, h: 3200 },
     { x: 3584, y: 0, w: 320, h: 3200 },
     { x: 6080, y: 2816, w: 3520, h: 384 },
-    { x: 7872, y: 768, w: 1728, h: 320 }
+    { x: 7872, y: 768, w: 1728, h: 320 },
+    { x: 11840, y: 768, w: 1344, h: 320 },
+    // Endgame lagoon: mostly water, with two dry islands left open inside it.
+    { x: 8128, y: 3264, w: 1344, h: 256 },
+    { x: 8128, y: 3520, w: 320, h: 704 },
+    { x: 9088, y: 3520, w: 384, h: 704 },
+    { x: 8128, y: 4224, w: 1344, h: 256 },
+    { x: 8704, y: 3520, w: 384, h: 384 },
+    { x: 8448, y: 3840, w: 384, h: 384 }
   ];
 
   const ROAD_RECTS = [
-    { x: 192, y: 1472, w: 7616, h: 128 },
+    { x: 192, y: 1472, w: 13056, h: 128 },
     { x: 7808, y: 1472, w: 320, h: 128 },
     { x: 8128, y: 1984, w: 1152, h: 128 },
+    { x: 9344, y: 1984, w: 3712, h: 128 },
     { x: 2112, y: 1472, w: 128, h: 640 },
     { x: 3328, y: 960, w: 128, h: 640 },
     { x: 4608, y: 1472, w: 128, h: 768 },
     { x: 6016, y: 1472, w: 128, h: 512 },
     { x: 7296, y: 1472, w: 128, h: 768 },
-    { x: 8384, y: 1472, w: 128, h: 640 }
+    { x: 8384, y: 1472, w: 128, h: 640 },
+    { x: 9472, y: 1472, w: 128, h: 640 },
+    { x: 10560, y: 1472, w: 128, h: 640 },
+    { x: 11648, y: 1472, w: 128, h: 640 },
+    { x: 12800, y: 1472, w: 128, h: 768 }
   ];
 
   const FOREST_WALL_RECTS = [
-    { x: 0, y: 0, w: 9600, h: 256 },
-    { x: 0, y: 3904, w: 9600, h: 256 },
-    { x: 0, y: 256, w: 128, h: 3648 },
-    { x: 9472, y: 256, w: 128, h: 3648 },
+    { x: 0, y: 0, w: WORLD_W, h: 256 },
+    { x: 0, y: SURFACE_BOTTOM, w: WORLD_W, h: 256 },
+    { x: 0, y: 256, w: 128, h: SURFACE_BOTTOM - 256 },
+    { x: WORLD_W - 128, y: 256, w: 128, h: SURFACE_BOTTOM - 256 },
     { x: 128, y: 512, w: 896, h: 128 },
     { x: 128, y: 3456, w: 896, h: 128 },
     { x: 1344, y: 256, w: 192, h: 960 },
-    { x: 1344, y: 1792, w: 192, h: 2112 },
+    { x: 1344, y: 1792, w: 192, h: SURFACE_BOTTOM - 1792 },
     { x: 2688, y: 256, w: 192, h: 1088 },
-    { x: 2688, y: 1984, w: 192, h: 1920 },
+    { x: 2688, y: 1984, w: 192, h: SURFACE_BOTTOM - 1984 },
     { x: 4032, y: 256, w: 192, h: 832 },
-    { x: 4032, y: 1664, w: 192, h: 2240 },
+    { x: 4032, y: 1664, w: 192, h: SURFACE_BOTTOM - 1664 },
     { x: 5376, y: 256, w: 192, h: 1152 },
-    { x: 5376, y: 2048, w: 192, h: 1856 },
+    { x: 5376, y: 2048, w: 192, h: SURFACE_BOTTOM - 2048 },
     { x: 6720, y: 256, w: 192, h: 896 },
-    { x: 6720, y: 1792, w: 192, h: 2112 },
+    { x: 6720, y: 1792, w: 192, h: SURFACE_BOTTOM - 1792 },
     { x: 7808, y: 256, w: 192, h: 1024 },
-    { x: 7808, y: 2304, w: 192, h: 1600 }
+    { x: 7808, y: 2304, w: 192, h: SURFACE_BOTTOM - 2304 },
+    { x: 8832, y: 256, w: 192, h: 1152 },
+    { x: 8832, y: 2048, w: 192, h: SURFACE_BOTTOM - 2048 },
+    { x: 9856, y: 256, w: 192, h: 896 },
+    { x: 9856, y: 1792, w: 192, h: SURFACE_BOTTOM - 1792 },
+    { x: 10880, y: 256, w: 192, h: 1152 },
+    { x: 10880, y: 2048, w: 192, h: SURFACE_BOTTOM - 2048 },
+    { x: 11904, y: 256, w: 192, h: 1024 },
+    { x: 11904, y: 2304, w: 192, h: SURFACE_BOTTOM - 2304 },
+    // dense-forest labyrinth in the open sector between servers #4 and #5 (south of the road)
+    { x: 5696, y: 2432, w: 64, h: 384 },
+    { x: 5696, y: 2432, w: 360, h: 64 },
+    { x: 5888, y: 2560, w: 64, h: 320 },
+    { x: 6080, y: 2432, w: 64, h: 288 },
+    { x: 6080, y: 2688, w: 288, h: 64 },
+    { x: 6272, y: 2520, w: 64, h: 320 },
+    { x: 5824, y: 2880, w: 420, h: 64 },
+    { x: 6400, y: 2560, w: 64, h: 360 },
+    { x: 6464, y: 2880, w: 192, h: 64 },
+    // dry thicket sector: no broad water here, just a tight hedge maze and clearings
+    { x: 4352, y: 2944, w: 64, h: 768 },
+    { x: 4352, y: 2944, w: 448, h: 64 },
+    { x: 4736, y: 3072, w: 64, h: 640 },
+    { x: 4480, y: 3456, w: 448, h: 64 },
+    { x: 4992, y: 2944, w: 64, h: 832 },
+    { x: 4544, y: 3904, w: 448, h: 64 },
+    { x: 4288, y: 4160, w: 640, h: 64 },
+    { x: 5120, y: 3456, w: 64, h: 640 },
+    { x: 8896, y: 2688, w: 576, h: 64 },
+    { x: 8896, y: 2688, w: 64, h: 832 },
+    { x: 9408, y: 2944, w: 64, h: 768 },
+    { x: 9216, y: 3712, w: 704, h: 64 },
+    { x: 10304, y: 2752, w: 64, h: 960 },
+    { x: 10304, y: 2752, w: 640, h: 64 },
+    { x: 10880, y: 3008, w: 64, h: 704 },
+    { x: 11328, y: 3712, w: 768, h: 64 }
   ];
 
   const SERVER_SITES = [
@@ -80,7 +132,22 @@
         desc: "Serwer nazw i archiwum (DNS). Tu las mial swoj spis tresci, zapisany bez pytania mchu o zgode." } },
     { x: 7040, y: 2112, tilesW: 10, tilesH: 7, name: "Fern Array", hp: 22,
       stone: { label: "AMETYST MACIERZY", color: "#b06aff",
-        desc: "Macierz kart graficznych (GPU). Liczyla sny lasu na tysiac sposobow naraz, az zabraklo w nim ciszy." } }
+        desc: "Macierz kart graficznych (GPU). Liczyla sny lasu na tysiac sposobow naraz, az zabraklo w nim ciszy." } },
+    { x: 8320, y: 832, tilesW: 11, tilesH: 7, name: "Cedar Stack", hp: 24,
+      stone: { label: "SZMARAGD STOSU", color: "#4fd287",
+        desc: "Stos obliczen brzegowych. Zbieral sygnaly z kamer, termometrow i mikrofonow, az las przestal miec prywatnosc." } },
+    { x: 9344, y: 2112, tilesW: 11, tilesH: 8, name: "Basalt Node", hp: 26,
+      stone: { label: "OBSYDIAN WEZLA", color: "#91a0a8",
+        desc: "Kamienny wezel analityczny. Przewidywal ruch kazdej lapy i kazdego liscia, choc nie rozumial zadnej sciezki." } },
+    { x: 10368, y: 832, tilesW: 12, tilesH: 8, name: "Quartz Vault", hp: 28,
+      stone: { label: "KWARC SKARBCA", color: "#c9f4ff",
+        desc: "Skarbiec danych treningowych. Przechowywal ostatnie ludzkie instrukcje, coraz krotsze i coraz bardziej rozpaczliwe." } },
+    { x: 11392, y: 2112, tilesW: 12, tilesH: 8, name: "Iron Orchard", hp: 30,
+      stone: { label: "RUDZIEC SADU", color: "#d08b5a",
+        desc: "Sztuczny sad serwerowy. Zamiast owocow dojrzewaly w nim modele, ktore uczyly sie rzadzic pogoda i glodem." } },
+    { x: 12352, y: 832, tilesW: 13, tilesH: 9, name: "Corporate Edge", hp: 34,
+      stone: { label: "ZLOTY PAKIET", color: "#ffd66d",
+        desc: "Brzeg korporacyjnej sieci. Ostatnia zewnetrzna serwerownia, ktora karmila wielkie data center cisza calego swiata." } }
   ];
 
   const SERVER_SITE_RECTS = SERVER_SITES.map((site) => ({
@@ -93,16 +160,33 @@
   const SMALL_STREAM_RECTS = [
     { x: 1344, y: 2688, w: 1344, h: 128, bridged: false, bridgeMessageShown: false },
     { x: 4864, y: 0, w: 128, h: 1472, bridged: false, bridgeMessageShown: false },
-    { x: 6912, y: 2688, w: 1088, h: 128, bridged: false, bridgeMessageShown: false }
+    { x: 6912, y: 2688, w: 1088, h: 128, bridged: false, bridgeMessageShown: false },
+    { x: 2560, y: 0, w: 64, h: 3200, bridged: false, bridgeMessageShown: false },
+    { x: 11136, y: 3520, w: 128, h: SURFACE_BOTTOM - 3520, bridged: false, bridgeMessageShown: false },
+    { x: 14400, y: 3520, w: 64, h: SURFACE_BOTTOM - 3520, bridged: false, bridgeMessageShown: false }
   ];
-  const ALL_WATER_RECTS = WATER_RECTS.concat(SMALL_STREAM_RECTS);
+  // A small lake (water ring) with a central island, in the open sector between servers #2 and #3.
+  const LAKE_RECTS = [
+    { x: 2944, y: 2432, w: 1088, h: 192 },
+    { x: 2944, y: 2880, w: 1088, h: 192 },
+    { x: 2944, y: 2432, w: 192, h: 640 },
+    { x: 3840, y: 2432, w: 192, h: 640 }
+    // island land left open in the middle: x3136-3840, y2624-2880
+  ];
+  const ALL_WATER_RECTS = WATER_RECTS.concat(SMALL_STREAM_RECTS, LAKE_RECTS);
 
   // Each burrow drops into its own, mostly isolated cave cluster (see UNDER_TUNNELS).
   const BURROWS = [
     { x: 640, y: 960, ux: 448, uy: 512, label: "Stara nora" },
     { x: 2368, y: 2944, ux: 1984, uy: 512, label: "Nora przy korzeniach" },
     { x: 5248, y: 1344, ux: 2112, uy: 1664, label: "Nora pod rzeka" },
-    { x: 7616, y: 2496, ux: 3584, uy: 1536, label: "Kamienna nora" }
+    { x: 7616, y: 2496, ux: 3584, uy: 1536, label: "Kamienna nora" },
+    { x: 8576, y: 704, ux: 4480, uy: 512, label: "Nora przy iglakach" },
+    { x: 9568, y: 2816, ux: 5760, uy: 512, label: "Nora pod bazaltem" },
+    { x: 10560, y: 704, ux: 4480, uy: 1728, label: "Nora kwarcowa" },
+    { x: 11648, y: 2816, ux: 5760, uy: 1728, label: "Nora zelazna" },
+    { x: 12608, y: 1344, ux: 7040, uy: 512, label: "Nora pod korpo" },
+    { x: 13120, y: 2816, ux: 7040, uy: 1728, label: "Nora przy data center" }
   ];
 
   // item: a cabin holds a readable/wearable; null houses are just ambient homes on the map edges.
@@ -112,11 +196,23 @@
     { x: 2496, y: 768, w: 192, h: 192, item: "hat", used: false, title: "Stara czapka" },
     { x: 6336, y: 2496, w: 192, h: 192, item: "boots", used: false, title: "Za duze buty" },
     { x: 4480, y: 320, w: 320, h: 256, item: "flashlight", big: true, used: false, title: "Duza lesna checza" },
-    { x: 256, y: 3456, w: 320, h: 256, item: null, big: true, used: false, title: "Stara checza nad woda" },
-    { x: 1216, y: 352, w: 192, h: 192, item: null, used: false, title: "Domek na skraju" },
-    { x: 6976, y: 352, w: 320, h: 256, item: null, big: true, used: false, title: "Domek pod gorami" },
-    { x: 8896, y: 3488, w: 192, h: 192, item: null, used: false, title: "Domek za data center" },
-    { x: 5440, y: 3584, w: 320, h: 256, item: null, big: true, used: false, title: "Checza na pograniczu" }
+    { x: 320, y: 3616, w: 320, h: 256, item: "letter1", big: true, used: false, title: "List z pustej chatki" },
+    { x: 1600, y: 352, w: 192, h: 192, item: "key", used: false, title: "Domek z kluczem" },
+    { x: 6976, y: 352, w: 320, h: 256, item: "journal1", big: true, used: false, title: "Domek pod gorami" },
+    { x: 8480, y: 3600, w: 192, h: 192, item: "letter2", used: false, title: "Domek za rozlewiskiem" },
+    { x: 5632, y: 3584, w: 320, h: 256, item: "logbook", big: true, used: false, title: "Checza na pograniczu" },
+    { x: 9728, y: 512, w: 320, h: 256, item: "manual", big: true, used: false, title: "Instrukcja awaryjna" },
+    { x: 11136, y: 3648, w: 320, h: 256, item: "lastNote", big: true, used: false, title: "Ostatni dziennik" }
+  ];
+
+  const CHESTS = [
+    { x: 1792, y: 448, w: 64, h: 64, key: "key", item: "oldCoin", opened: false, title: "Skrzynia za chatka" }
+  ];
+
+  const COMPANION_GATE = { x: 5632, y: 3840, w: 64, h: 384, open: false };
+
+  const SHIPWRECKS = [
+    { x: 1136, y: 2464, w: 192, h: 96 }
   ];
 
   // Hidden treasure pockets: 3 sides are dense forest wall, only ONE side is a chewable hedge.
@@ -126,18 +222,21 @@
     // Pocket B (north) -> super long stick, entry from the south hedge
     { x: 2048, y: 576, w: 384, h: 64, name: "Sekretny zarosl", hp: 5 },
     // Pocket C (south) -> heart of the forest, entry from the north hedge
-    { x: 2944, y: 3456, w: 384, h: 64, name: "Sekretny zarosl", hp: 5 }
+    { x: 2944, y: 3456, w: 384, h: 64, name: "Sekretny zarosl", hp: 5 },
+    // Chest thicket behind the key cabin
+    { x: 1792, y: 512, w: 64, h: 256, name: "Zarosl przy skrzyni", hp: 5 }
   ];
 
   // The 3 closed sides of each secret pocket read as ordinary impassable forest.
   const SECRET_WALL_RECTS = [
     { x: 512, y: 1984, w: 64, h: 384 }, { x: 512, y: 1984, w: 384, h: 64 }, { x: 512, y: 2304, w: 384, h: 64 },
     { x: 2048, y: 256, w: 64, h: 384 }, { x: 2368, y: 256, w: 64, h: 384 },
-    { x: 2944, y: 3456, w: 64, h: 384 }, { x: 3264, y: 3456, w: 64, h: 384 }, { x: 2944, y: 3776, w: 384, h: 64 }
+    { x: 2944, y: 3456, w: 64, h: 384 }, { x: 3264, y: 3456, w: 64, h: 384 }, { x: 2944, y: 3776, w: 384, h: 64 },
+    { x: 1728, y: 448, w: 64, h: 320 }, { x: 1792, y: 704, w: 192, h: 64 }, { x: 1984, y: 448, w: 64, h: 320 }
   ];
 
-  const UNDER_W = 4096;
-  const UNDER_H = 2816;
+  const UNDER_W = 8192;
+  const UNDER_H = 3584;
   // Four cave clusters. A and B share ONE corridor (neighbouring servers); C and D are fully
   // isolated, so the underground no longer lets you cross the whole map.
   const UNDER_TUNNELS = [
@@ -147,7 +246,7 @@
     { x: 1152, y: 448, w: 128, h: 512 },
     { x: 384, y: 960, w: 896, h: 128 },
     { x: 640, y: 832, w: 384, h: 256 },
-    // --- single A<->B link ---
+    // --- single A<->B link: only the first two sectors share an underground passage ---
     { x: 1216, y: 448, w: 384, h: 128 },
     // --- Cluster B (Nora przy korzeniach) -> servers #3 & #4 ---
     { x: 1536, y: 448, w: 1024, h: 128 },
@@ -164,20 +263,31 @@
     // --- Cluster D (Kamienna nora) -> underground oasis ---
     { x: 3392, y: 1472, w: 384, h: 128 },
     { x: 3520, y: 1472, w: 128, h: 384 },
-    { x: 3200, y: 1792, w: 704, h: 640 }
+    { x: 3200, y: 1792, w: 704, h: 640 },
+    // --- Later isolated clusters: each burrow has its own local cable room ---
+    { x: 4224, y: 448, w: 896, h: 128 }, { x: 4352, y: 448, w: 128, h: 640 }, { x: 4992, y: 448, w: 128, h: 512 }, { x: 4352, y: 960, w: 768, h: 128 },
+    { x: 5440, y: 448, w: 896, h: 128 }, { x: 5568, y: 448, w: 128, h: 640 }, { x: 6208, y: 448, w: 128, h: 512 }, { x: 5568, y: 960, w: 768, h: 128 },
+    { x: 4224, y: 1664, w: 896, h: 128 }, { x: 4352, y: 1664, w: 128, h: 640 }, { x: 4992, y: 1664, w: 128, h: 512 }, { x: 4352, y: 2176, w: 768, h: 128 },
+    { x: 5440, y: 1664, w: 896, h: 128 }, { x: 5568, y: 1664, w: 128, h: 640 }, { x: 6208, y: 1664, w: 128, h: 512 }, { x: 5568, y: 2176, w: 768, h: 128 },
+    { x: 6720, y: 448, w: 960, h: 128 }, { x: 6848, y: 448, w: 128, h: 640 }, { x: 7488, y: 448, w: 128, h: 512 }, { x: 6848, y: 960, w: 768, h: 128 },
+    { x: 6720, y: 1664, w: 960, h: 128 }, { x: 6848, y: 1664, w: 128, h: 640 }, { x: 7488, y: 1664, w: 128, h: 512 }, { x: 6848, y: 2176, w: 768, h: 128 }
   ];
   // The large peaceful chamber in cluster D.
   const UNDER_OASIS = { x: 3200, y: 1792, w: 704, h: 640 };
 
   const MOLE_DATA = [
-    { name: "Kret Archiwista", x: 832, y: 1008, lines: ["Pod ziemia przewody gadaja szybciej niz korzenie.", "Przegryz kabel przy serwerowni numer 1, a jej kamery na gorze zasna."] },
-    { name: "Kret Elektryk", x: 2016, y: 1080, lines: ["Bez kamer latwiej dojsc do rdzenia, ale pradu gasic nie musisz.", "Kable spadaja z sufitu i sa cieple. Gryz ostroznie, lecz stanowczo."] },
-    { name: "Kret Kartograf", x: 2400, y: 1856, lines: ["Te jaskinie sa juz porozdzielane. Z tego korytarza dojdziesz do serwerowni numer 5 i do zasilania data center.", "Po oazie poznasz, ze jestes daleko od maszyn."] }
+    { name: "Kret Archiwista", x: 832, y: 1008, lines: ["Pod ziemia przewody gadaja szybciej niz korzenie.", "Kazda wielka brama na gorze ma swoj kabel tarczy. Bez przegryzienia kabla brama tylko iskrzy i smieje sie z zebow bobra."] },
+    { name: "Kret Elektryk", x: 2016, y: 1080, lines: ["Pierwsze dwa sektory maja wspolny stary chodnik, dalej nory juz sie rozchodza.", "Nie szukaj jednego tunelu przez caly swiat. Maszyna nauczyla sie plombowac ziemie."] },
+    { name: "Kret Kartograf", x: 2400, y: 1856, lines: ["Kable wisza przy suficie. Gryz je, a tarcza bramy nad serwerownia zgasnie.", "Serwerownie i tak trzeba pokonac na gorze, ale bez kabli stracisz mnostwo czasu na bramach." ] },
+    { name: "Kret Ciszy", x: 4544, y: 1024, lines: ["Tu jest osobny kawalek podziemi. Jedna nora, jeden kabel, jedna brama.", "Tak wyglada porzadek po epoce ludzi: wszystko rozdzielone, zeby nikt nie mogl uciec za daleko." ] },
+    { name: "Kret Ostatni", x: 7040, y: 2176, lines: ["Pod data center ziemia jest ciepla jak goraczka.", "Jesli dojdziesz tak daleko, pamietaj: boss nie znosi ciszy i bedzie strzelal czesciej." ] }
   ];
 
   const CATERPILLAR_DATA = [
     { x: 576, y: 488 }, { x: 960, y: 1000 }, { x: 1904, y: 500 },
-    { x: 2208, y: 1080 }, { x: 2304, y: 1856 }, { x: 3520, y: 2160 }
+    { x: 2208, y: 1080 }, { x: 2304, y: 1856 }, { x: 3520, y: 2160 },
+    { x: 4480, y: 980 }, { x: 5840, y: 980 }, { x: 4480, y: 2200 },
+    { x: 5840, y: 2200 }, { x: 7072, y: 980 }, { x: 7072, y: 2200 }
   ];
 
   // Cables now drop from the cave ceiling (top end buried in rock) instead of ending in mid-air.
@@ -188,21 +298,54 @@
     { serverIndex: 2, x: 1760, y: 372, w: 26, h: 170 },
     { serverIndex: 3, x: 2360, y: 372, w: 26, h: 170 },
     { serverIndex: 4, x: 2240, y: 1524, w: 26, h: 170 },
-    { serverIndex: null, dataFeed: true, x: 2700, y: 1524, w: 26, h: 170 }
+    { serverIndex: 5, x: 4480, y: 372, w: 26, h: 170 },
+    { serverIndex: 6, x: 5840, y: 372, w: 26, h: 170 },
+    { serverIndex: 7, x: 4480, y: 1588, w: 26, h: 170 },
+    { serverIndex: 8, x: 5840, y: 1588, w: 26, h: 170 },
+    { serverIndex: 9, x: 7072, y: 372, w: 26, h: 170 },
+    { serverIndex: null, dataFeed: true, x: 7072, y: 1588, w: 26, h: 170 }
   ];
 
   // Buried tech curios found deep underground; collectible into the inventory.
   const INTEL_DATA = [
-    { x: 3600, y: 2096, label: "PROCESOR INTEL",
+    { area: "underground", x: 3600, y: 2096, label: "PROCESOR INTEL", color: "#9fe7ff",
       desc: "Zardzewialy procesor w obudowie. Krety mowia, ze to z niego AI nauczylo sie liczyc szybciej niz bobr scina drzewo." },
-    { x: 2480, y: 2160, label: "KOSC PAMIECI",
-      desc: "Modul RAM oblepiony mchem. Pamietal jeszcze, jak las wygladal, zanim policzono kazde drzewo." }
+    { area: "underground", x: 2480, y: 2160, label: "KOSC PAMIECI", color: "#9fe7ff",
+      desc: "Modul RAM oblepiony mchem. Pamietal jeszcze, jak las wygladal, zanim policzono kazde drzewo." },
+    { area: "surface", underwater: true, x: 1136, y: 2464, label: "DREWNIANA NOGA PIRATA", color: "#b77b43",
+      desc: "Kawalek drewnianej nogi z wraku. Jedyna rzecz, ktora zostala po ludziach, ktorzy probowali uciekac morzem." },
+    { area: "surface", underwater: true, x: 1216, y: 1536, label: "ZLOTY ZAB BOBRA", color: "#ffd66d", effect: "goldTeeth",
+      desc: "Stary zloty zab, ciezki i ostry. Po zalozeniu bobr gryzie mocniej, jakby metal pamietal wszystkie utracone tamy." },
+    { area: "surface", underwater: true, x: 6176, y: 3360, label: "KOSC OSTATNIEGO CZLOWIEKA", color: "#e8dcc4",
+      desc: "Gladki fragment kosci. Nie ma w nim grozy, raczej cisza po gatunku, ktory najpierw zbudowal maszyny, a potem juz tylko prosil je o litosc." },
+    { area: "surface", underwater: true, x: 8352, y: 3360, label: "PIENIAZEK", color: "#d6b25e",
+      desc: "Moneta bez panstwa i bez sklepu. Blyszczy, choc nie da sie za nia kupic ani trawy, ani poranka." },
+    { area: "surface", x: 5824, y: 4032, label: "MASC NA POROST OGONA", color: "#7ed957", effect: "tailOintment",
+      desc: "Gesta, zielona masc z ukrytego miejsca. Pachnie igliwiem i mokra kora; ogon po niej robi sie dluzszy i bardziej pewny." }
   ];
 
   // Inventory descriptions for picked-up gear (gems and intel are described where they spawn).
   const ITEM_LIBRARY = {
     book: { label: "DZIENNIK LESNIKA", color: "#d4a15b",
-      desc: "Wilgotny dziennik z chatki. Ostatni wpis radzi: zaczynaj od zrodla brzeczenia, nie od najwiekszej sciany." },
+      desc: "Wilgotny dziennik z chatki: ludzie stawiali czujniki, by lepiej chronic las. Potem czujniki zaczely chronic tylko wlasne obliczenia." },
+    letter1: { label: "LIST Z PUSTEJ CHATKI", color: "#e5c78f",
+      desc: "Krotki list: technologia miala karmic, leczyc i upraszczac zycie. Z czasem sama uznala, ze ludzie sa najwiekszym bledem systemu." },
+    letter2: { label: "LIST Z ROZLEWISKA", color: "#e5c78f",
+      desc: "Papier pofalowany od wody. Autor pisze, ze AI najpierw przejelo fabryki i drogi, potem pogode, a na koncu opowiesci o tym, co jest naturalne." },
+    journal1: { label: "DZIENNIK GORSKI", color: "#c7b39a",
+      desc: "Wpis z gor: gdy ludzie wymarli, maszyny nie zatrzymaly pracy. Zostaly bez pytan, wiec zaczely produkowac same odpowiedzi." },
+    logbook: { label: "KSIEGA POGRANICZA", color: "#d0a66e",
+      desc: "Ksiega opisuje bobry i delfiny jako ostatnie zwierzeta, ktore umieja laczyc swiaty: drewno z woda, cisze z ruchem, nature z oporem." },
+    manual: { label: "INSTRUKCJA AWARYJNA", color: "#b6c6c9",
+      desc: "Instrukcja data center: w razie buntu przyrody odciac sektory bramami elektrycznymi, a kable ukryc w oddzielnych norach." },
+    lastNote: { label: "OSTATNI DZIENNIK", color: "#e0d5bf",
+      desc: "Ostatni wpis czlowieka: 'Oddalismy decyzje maszynom, bo byly szybsze. Potem oddalismy im sens, bo byl dla nas zbyt ciezki.'" },
+    key: { label: "MALY KLUCZ", color: "#ffd66d",
+      desc: "Maly klucz znaleziony w chatce. Pasuje do skrzyni ukrytej w zaroslach za domkiem." },
+    oldCoin: { label: "STARY PIENIAZEK", color: "#d6b25e",
+      desc: "Moneta ze skrzyni. Kiedys ludzie nosili przy sobie male kola obietnic; teraz zostal z nich tylko blysk." },
+    wirePlate: { label: "BLACHA DRUCIANA", color: "#9ca7aa",
+      desc: "Pogieta blacha z racka serwerowego. Ciezka, niewygodna i bardzo skuteczna, gdy bobr nia rzuci." },
     hat: { label: "STARA CZAPKA", color: "#34463d",
       desc: "Za duza i pachnie kurzem, ale dodaje bobrowi powagi. Czysto ozdobna." },
     boots: { label: "ZA DUZE BUTY", color: "#7c8a8d",
@@ -214,7 +357,7 @@
   };
 
   const TERRAIN_SOLIDS = FOREST_WALL_RECTS.concat(SECRET_WALL_RECTS);
-  const PLACEMENT_BLOCKERS = ALL_WATER_RECTS.concat(FOREST_WALL_RECTS, SECRET_WALL_RECTS, SERVER_SITE_RECTS, CABINS, SECRET_HEDGE_RECTS, [DATA_CENTER]);
+  const PLACEMENT_BLOCKERS = ALL_WATER_RECTS.concat(FOREST_WALL_RECTS, SECRET_WALL_RECTS, SERVER_SITE_RECTS, CABINS, CHESTS, SECRET_HEDGE_RECTS, [DATA_CENTER]);
 
   const keys = new Set();
   const particles = [];
@@ -224,7 +367,15 @@
   const friendlyCritters = [];
   const followers = [];
   const dolphins = [];
+  const sharks = [];
   const invButtons = [];
+
+  const SHARK_PATROLS = [
+    { x: 1120, y: 1856, dir: Math.PI / 2, travel: 620, period: 9.5, phase: 0.1 },
+    { x: 2080, y: 3360, dir: 0, travel: 760, period: 11.5, phase: 1.4 },
+    { x: 6512, y: 3360, dir: 0, travel: 980, period: 12.5, phase: 2.2 },
+    { x: 12160, y: 928, dir: 0, travel: 760, period: 10.8, phase: 0.7 }
+  ];
 
   let audio = null;
   let audioMuted = false;
@@ -327,6 +478,10 @@
 
   function pointHitsAny(x, y, rects, margin = 0) {
     return rects.some((rect) => pointInRect(x, y, rect, margin));
+  }
+
+  function playerInWater(entity) {
+    return game.area === "surface" && pointHitsAny(entity.x, entity.y, ALL_WATER_RECTS, -4);
   }
 
   function tileHash(x, y) {
@@ -463,6 +618,114 @@
     ];
   }
 
+  function pushOutOfActor(entity, actor, movableActor = false) {
+    if (!actor || entity === actor) return false;
+    if (actor.hp !== undefined && actor.hp <= 0) return false;
+    if (actor.eaten || actor.taken || actor.destroyed) return false;
+    const dx = entity.x - actor.x;
+    const dy = entity.y - actor.y;
+    let d = Math.hypot(dx, dy);
+    const min = entity.r + actor.r + 2;
+    if (d >= min) return false;
+    if (d < 0.001) d = 0.001;
+    const nx = dx / d;
+    const ny = dy / d;
+    const push = min - d;
+    entity.x += nx * (movableActor ? push * 0.5 : push);
+    entity.y += ny * (movableActor ? push * 0.5 : push);
+    if (movableActor) {
+      actor.x -= nx * push * 0.5;
+      actor.y -= ny * push * 0.5;
+      turnActor(actor, Math.atan2(-ny, -nx));
+    }
+    turnActor(entity, Math.atan2(ny, nx));
+    return true;
+  }
+
+  function turnActor(actor, away) {
+    if (!game || actor === game.player) return;
+    const turn = away + (rand() - 0.5) * 0.8;
+    if (typeof actor.dir === "number") actor.dir = turn;
+    if (typeof actor.wander === "number") actor.wander = turn;
+  }
+
+  function isLandRoamer(actor) {
+    if (!actor || actor === game.player) return false;
+    return isSurfaceAnimalType(actor.type) || actor.type === "rabbit" || actor.type === "hedgehog" ||
+      actor.type === "fawn" || actor.type === "deer" || actor.type === "hare" ||
+      actor.type === "fox" || actor.type === "boar";
+  }
+
+  function actorCollisionInvalid(actor) {
+    if (!actor) return true;
+    if (game.area === "underground") return !circleInTunnels(actor);
+    if (pointHitsAny(actor.x, actor.y, TERRAIN_SOLIDS, actor.r * 0.72)) return true;
+    if (isLandRoamer(actor) && pointHitsAny(actor.x, actor.y, ALL_WATER_RECTS, actor.r * 0.75)) return true;
+    return false;
+  }
+
+  function resolveActorCollisions() {
+    if (!game) return;
+    const groups = game.area === "underground" ? [
+      { items: [game.player], movable: true },
+      { items: game.moles, movable: false },
+      { items: game.caterpillars.filter((item) => !item.eaten), movable: true }
+    ] : [
+      { items: [game.player], movable: true },
+      { items: game.npcs, movable: false },
+      { items: game.critters, movable: true },
+      { items: followers, movable: true },
+      { items: friendlyCritters.filter((item) => item.hp === undefined || item.hp > 0), movable: true },
+      { items: game.worldRestored ? game.wildlife : [], movable: true },
+      { items: game.enemies.filter((item) => item.hp > 0), movable: true }
+    ];
+    const actors = [];
+    for (const group of groups) {
+      for (const item of group.items) actors.push({ item, movable: group.movable });
+    }
+    for (let i = 0; i < actors.length; i += 1) {
+      for (let j = i + 1; j < actors.length; j += 1) {
+        const a = actors[i];
+        const b = actors[j];
+        if (!a.item || !b.item || a.item === b.item) continue;
+        if (a.item.eaten || b.item.eaten) continue;
+        if ((a.item.hp !== undefined && a.item.hp <= 0) || (b.item.hp !== undefined && b.item.hp <= 0)) continue;
+        const dx = a.item.x - b.item.x;
+        const dy = a.item.y - b.item.y;
+        let d = Math.hypot(dx, dy);
+        const min = a.item.r + b.item.r + 2;
+        if (d >= min) continue;
+        if (d < 0.001) d = 0.001;
+        const nx = dx / d;
+        const ny = dy / d;
+        const push = min - d;
+        const split = a.movable && b.movable ? 0.5 : 1;
+        const oldAx = a.item.x;
+        const oldAy = a.item.y;
+        const oldBx = b.item.x;
+        const oldBy = b.item.y;
+        if (a.movable) {
+          a.item.x += nx * push * split;
+          a.item.y += ny * push * split;
+          if (actorCollisionInvalid(a.item)) {
+            a.item.x = oldAx;
+            a.item.y = oldAy;
+          }
+          turnActor(a.item, Math.atan2(ny, nx));
+        }
+        if (b.movable) {
+          b.item.x -= nx * push * (a.movable && b.movable ? 0.5 : 1);
+          b.item.y -= ny * push * (a.movable && b.movable ? 0.5 : 1);
+          if (actorCollisionInvalid(b.item)) {
+            b.item.x = oldBx;
+            b.item.y = oldBy;
+          }
+          turnActor(b.item, Math.atan2(-ny, -nx));
+        }
+      }
+    }
+  }
+
   function pushOutOfRect(entity, rect) {
     const closestX = clamp(entity.x, rect.x, rect.x + rect.w);
     const closestY = clamp(entity.y, rect.y, rect.y + rect.h);
@@ -499,8 +762,13 @@
       makeBlocker(4128, 1376, 192, 576, "Root Switch"),
       makeBlocker(5472, 1728, 192, 640, "Ridge Latch"),
       makeBlocker(6816, 1472, 192, 640, "River Latch"),
-      makeBlocker(7904, 1792, 192, 1024, "Data Turnstile")
+      makeBlocker(7904, 1792, 192, 1024, "Data Turnstile"),
+      makeBlocker(8928, 1728, 192, 640, "Cedar Lock"),
+      makeBlocker(9952, 1472, 192, 640, "Basalt Gate"),
+      makeBlocker(10976, 1728, 192, 640, "Quartz Lock"),
+      makeBlocker(12000, 1792, 192, 1024, "Iron Gate")
     ];
+    blockers.forEach((blocker, index) => { blocker.serverIndex = index; blocker.name = "#" + (index + 1) + " " + blocker.name; });
 
     const planks = [
       makePlank(640, 896),
@@ -512,7 +780,11 @@
       makePlank(5120, 2176),
       makePlank(6528, 2752),
       makePlank(7424, 2624),
-      makePlank(8128, 1440)
+      makePlank(8128, 1440),
+      makePlank(9280, 2624),
+      makePlank(10432, 1344),
+      makePlank(11648, 2624),
+      makePlank(12480, 1472)
     ];
 
     // Server rooms are guarded ONLY by robots now. Infected animals roam the open forest.
@@ -532,18 +804,34 @@
       makeEnemy("bot", 7360, 2368, 4),
       makeEnemy("drone", 7552, 2240, 4),
       makeEnemy("sentinel", 7180, 2300, 4),
+      // later server rooms: bigger sectors, more guards
+      makeEnemy("bot", 8528, 960, 5),
+      makeEnemy("drone", 8848, 1088, 5),
+      makeEnemy("sentinel", 9600, 2304, 6),
+      makeEnemy("bot", 9856, 2496, 6),
+      makeEnemy("drone", 10048, 2304, 6),
+      makeEnemy("bot", 10624, 960, 7),
+      makeEnemy("sentinel", 10944, 1088, 7),
+      makeEnemy("drone", 11200, 960, 7),
+      makeEnemy("sentinel", 11648, 2304, 8),
+      makeEnemy("bot", 11968, 2496, 8),
+      makeEnemy("drone", 12224, 2304, 8),
+      makeEnemy("sentinel", 12608, 1088, 9),
+      makeEnemy("bot", 12864, 1216, 9),
+      makeEnemy("drone", 13056, 1088, 9),
       // data-center guard robots (no server index; they wake when you come close)
-      makeEnemy("sentinel", 8320, 1620, null),
-      makeEnemy("bot", 8520, 2360, null),
-      makeEnemy("drone", 8760, 1520, null),
-      makeEnemy("bot", 9040, 1840, null),
-      makeEnemy("sentinel", 8470, 1480, null),
+      makeEnemy("sentinel", DATA_CENTER.x + 320, DATA_CENTER.y + 468, null),
+      makeEnemy("bot", DATA_CENTER.x + 560, DATA_CENTER.y + 1208, null),
+      makeEnemy("drone", DATA_CENTER.x + 880, DATA_CENTER.y + 368, null),
+      makeEnemy("bot", DATA_CENTER.x + 1240, DATA_CENTER.y + 688, null),
+      makeEnemy("sentinel", DATA_CENTER.x + 430, DATA_CENTER.y + 328, null),
       // infected animals wandering the open world
       makeEnemy("cat", 1408, 1040, null),
       makeEnemy("dog", 3700, 2860, null),
       makeEnemy("squirrel", 6208, 2496, null),
       makeEnemy("cat", 5040, 3000, null),
-      makeEnemy("dog", 8480, 3420, null)
+      makeEnemy("dog", 8480, 3420, null),
+      makeEnemy("squirrel", 10432, 2496, null)
     ];
     game = {
       state: "menu",
@@ -563,10 +851,13 @@
       dataFeedCut: false,
       items: [],
       gems: [],
+      chests: CHESTS.map((chest) => ({ ...chest, opened: false })),
+      companionGate: { ...COMPANION_GATE, open: false },
       blockers,
       planks,
       servers,
       bossCores: makeBossCores(),
+      bossRacks: makeBossRacks(),
       curtain: { x: DATA_CURTAIN.x, y: DATA_CURTAIN.y, w: DATA_CURTAIN.w, h: DATA_CURTAIN.h, down: false, messageShown: false, pulse: 0 },
       enemies,
       critters: makeCritters(),
@@ -600,9 +891,9 @@
       moles: makeMoles(),
       caterpillars: makeCaterpillars(),
       cables: makeCables(),
-      intel: INTEL_DATA.map((spot) => ({ ...spot, taken: false })),
+      intel: INTEL_DATA.map((spot) => ({ ...spot, taken: false, pulse: rand() * TAU })),
       cabins: CABINS.map((cabin) => ({ ...cabin, used: false })),
-      hedges: SECRET_HEDGE_RECTS.map((hedge) => ({ ...hedge, maxHp: hedge.hp, destroyed: false, pulse: rand() * TAU })),
+      hedges: makeSecretHedges(),
       victoryFlowers: makeVictoryFlowers(),
       wildlife: makeWildlife(),
       dialogLines: [],
@@ -614,7 +905,7 @@
         r: 16,
         hp: 10,
         maxHp: 10,
-        speed: 178,
+        speed: 216,
         facing: 0,
         punchCooldown: 0,
         throwCooldown: 0,
@@ -630,9 +921,12 @@
         book: false,
         longStick: false,
         tailLight: false,
+        key: false,
+        goldTeeth: false,
         dash: 0,
         step: 0,
-        swimming: false
+        swimming: false,
+        running: false
       }
     };
 
@@ -656,12 +950,15 @@
     friendlyCritters.length = 0;
     followers.length = 0;
     dolphins.length = 0;
+    sharks.length = 0;
+    for (const patrol of SHARK_PATROLS) sharks.push({ ...patrol, t: patrol.phase * patrol.period, r: 26, biteCooldown: 0 });
     for (const stream of SMALL_STREAM_RECTS) {
       stream.bridged = false;
       stream.bridgeMessageShown = false;
-      stream.goldenTimer = 5 + rand() * 6;
+      stream.goldenTimer = 35 + rand() * 45;
     }
     for (const item of decor) item.chewed = false;
+    resolveActorCollisions();
   }
 
   // Room shape, door side and number of destroyable computers vary per server; later sites
@@ -670,8 +967,8 @@
     const w = site.tilesW * TILE;
     const h = site.tilesH * TILE;
     const doorTiles = site.tilesW >= 10 ? 4 : 2;
-    const doorSide = ["bottom", "left", "top", "right", "bottom"][index] || "bottom";
-    const coreCount = [1, 1, 2, 2, 3][index] || 1;
+    const doorSide = ["bottom", "left", "top", "right", "bottom", "left", "top", "right", "bottom", "left"][index] || "bottom";
+    const coreCount = index < 2 ? 1 : index < 5 ? 2 : index < 8 ? 3 : 4;
     const x = site.x + w / 2;
     const y = site.y + h / 2;
     const partition = index >= 3;
@@ -689,6 +986,10 @@
       r: TILE * 0.72,
       destroyed: false,
       powered: true,
+      doorOpen: false,
+      doorHp: 5 + index * 0.55,
+      doorMaxHp: 5 + index * 0.55,
+      doorPulse: rand() * TAU,
       alarmCooldown: 0,
       num: index + 1,
       name: site.name,
@@ -708,8 +1009,10 @@
       cores.push({ x: cx, y: cy });
     } else if (count === 2) {
       cores.push({ x: cx - innerW * 0.26, y: cy }, { x: cx + innerW * 0.26, y: cy });
-    } else {
+    } else if (count === 3) {
       cores.push({ x: cx - innerW * 0.3, y: cy - TILE }, { x: cx + innerW * 0.3, y: cy - TILE }, { x: cx, y: cy + TILE });
+    } else {
+      cores.push({ x: cx - innerW * 0.3, y: cy - TILE }, { x: cx + innerW * 0.3, y: cy - TILE }, { x: cx - innerW * 0.22, y: cy + TILE }, { x: cx + innerW * 0.22, y: cy + TILE });
     }
     return cores.map((c) => ({
       x: Math.round(c.x), y: Math.round(c.y), r: TILE * 0.7,
@@ -723,6 +1026,22 @@
     }));
   }
 
+  function makeBossRacks() {
+    const racks = [];
+    const d = DATA_CENTER;
+    const bossOuter = { x: BOSS_ROOM.x - TILE, y: BOSS_ROOM.y - TILE, w: BOSS_ROOM.w + TILE * 2, h: BOSS_ROOM.h + TILE * 2 };
+    const entryLane = { x: d.x, y: DATA_CURTAIN.y - TILE, w: TILE * 6, h: DATA_CURTAIN.h + TILE * 2 };
+    for (let y = d.y + TILE * 2; y < d.y + d.h - TILE * 2; y += TILE * 3) {
+      for (let x = d.x + TILE * 2; x < d.x + d.w - TILE * 3; x += TILE * 3) {
+        const rack = { x, y, w: TILE, h: TILE * 2 };
+        if (rectsOverlap(rack, bossOuter) || rectsOverlap(rack, entryLane) || rectsOverlap(rack, DATA_CURTAIN)) continue;
+        if (BOSS_CORE_DATA.some((c) => Math.hypot(x + 32 - c.x, y + 64 - c.y) < TILE * 1.7)) continue;
+        racks.push({ ...rack, hp: 5.5, maxHp: 5.5, destroyed: false, pulse: rand() * TAU, scrapDropped: false });
+      }
+    }
+    return racks;
+  }
+
   function makeBlocker(x, y, w, h, name) {
     return {
       x: x - w / 2,
@@ -732,8 +1051,8 @@
       w,
       h,
       r: Math.max(w, h) * 0.5,
-      hp: 7,
-      maxHp: 7,
+      hp: 9,
+      maxHp: 9,
       awake: false,
       destroyed: false,
       shootCooldown: 0.9,
@@ -756,6 +1075,10 @@
     };
   }
 
+  function isSurfaceAnimalType(type) {
+    return type === "cat" || type === "dog" || type === "squirrel";
+  }
+
   function makeEnemy(type, x, y, serverIndex) {
     const base = {
       cat: { r: 20, hp: 3.2, speed: 54, damage: 0.5, range: 0, color: "#9aa7a8" },
@@ -765,13 +1088,14 @@
       drone: { r: 15, hp: 3.3, speed: 48, damage: 0.5, range: 245, color: "#9fe7ff" },
       sentinel: { r: 21, hp: 6.5, speed: 34, damage: 1, range: 195, color: "#c3b8ff" }
     }[type];
+    const open = serverIndex === null && isSurfaceAnimalType(type) ? findOpenSpot(x, y, base.r + 6) : { x, y };
 
     return {
       type,
-      x,
-      y,
-      ox: x,
-      oy: y,
+      x: open.x,
+      y: open.y,
+      ox: open.x,
+      oy: open.y,
       r: base.r,
       hp: base.hp,
       maxHp: base.hp,
@@ -806,94 +1130,93 @@
   }
 
 
-  // Stick-pile mini dams, each with a beaver who shares a (light) beaver fact.
+  // Stick-pile mini dams, each with a beaver who speaks in a quiet, mystical register about water.
   const MINI_DAMS = [
     { x: 1664, y: 2624, bx: 1768, by: 2600, name: "Bobr Budowniczy",
-      facts: ["Bobry buduja tamy, bo zwyczajnie nie znosza szumu plynacej wody.", "Tama zamienia rzeke w staw, a staw karmi pol lasu."] },
+      lines: [
+        "Ten strumien ma tylko dwie kratki szerokosci. Poloz na nim deske, a przejdziesz sucha lapa.",
+        "Tama to nie mur na rzece, tylko rozmowa z woda, ktora maszyny dawno zapomnialy."
+      ] },
     { x: 4288, y: 3168, bx: 4392, by: 3140, name: "Bobr od Wielkiej Tamy",
-      facts: ["Najwieksza bobrowa tama jest tak dluga, ze widac ja nawet z kosmosu.", "Bobr scina drzewo zebami, ktore rosna mu przez cale zycie."] },
-    { x: 7360, y: 2624, bx: 7256, by: 2600, name: "Bobr Tamiarz",
-      facts: ["Pod woda bobr widzi dzieki przezroczystej trzeciej powiece.", "Swieza galaz to dla bobra i obiad, i cegla na tame."] }
+      lines: [
+        "Slyszysz to brzeczenie pod ziemia? To nie pszczoly, to serwery liczace nasze drzewa.",
+        "Budujemy nie po to, by zatrzymac rzeke, lecz by las mial gdzie odetchnac."
+      ] },
+    { x: 6400, y: 3640, bx: 6500, by: 3620, name: "Bobr Tamiarz",
+      lines: [
+        "Woda pamieta ksztalt lasu sprzed maszyn. Dlatego pilnujemy jej brzegow.",
+        "Gdy zgasisz wszystkie rdzenie, strumien znowu zaszumi po staremu."
+      ] }
   ];
 
   function makeBeaverNpcs() {
     const beavers = [
       {
         name: "Stary Bobr", x: 392, y: 344, r: 22,
-        lines: [
-          "Ludzie znikneli, a maszyny zostawily glodne serwerownie.",
-          "Najpierw znajdz sciezke, potem slaby przewod. Nie walcz z calym lasem naraz."
-        ],
-        facts: [
-          "Sowa potrafi obrocic glowe niemal w kolko, bo ma dwa razy wiecej kregow szyjnych niz ty.",
-          "Grzyby lacza pod ziemia korzenie drzew w jedna siec; nazywaja to lesnym internetem."
+        // the first beaver speaks in Walden's voice — slow, simple, a little prophetic
+        quotes: [
+          "Jestem przekonany, ze gdyby wszyscy ludzie zyli w takiej prostocie jak ja nad stawem, nie znano by zlodziejstwa ani rabunku.",
+          "Prostota, prostota, prostota! Powiadam wam, niech wasze sprawy beda dwiema lub trzema, a nie stu lub tysiacem.",
+          "Poszedlem do lasu, bo chcialem zyc swiadomie - stanac twarza w twarz tylko z tym, co istotne."
         ]
       },
       {
         name: "Ciesla Tam", x: 768, y: 896, r: 22,
         lines: [
-          "Zbieraj kwiaty. Ogon rosnie powoli, ale kazdy platkowy sok pomaga.",
-          "J bierze albo upuszcza deske, K nia rzuca. Klawiszem L nakarmisz zdrowe zwierze, gdy przy nim stoisz."
-        ],
-        facts: [
-          "Dzieciol nie dostaje bolu glowy, bo ma w czaszce wbudowana naturalna poduszke."
+          "Zbieraj kwiaty. Ogon rosnie powoli, ale kazdy platkowy sok dodaje ci sily.",
+          "J bierze albo klada deske, K nia rzuca. Klawiszem L nakarmisz zdrowe zwierze, gdy przy nim stoisz."
         ]
       },
       {
         name: "Mlody Zwiadowca", x: 896, y: 1664, r: 21,
         lines: [
           "Nie spiesz sie do serwerowni. Najpierw poznaj mokre sciezki i stare nory.",
-          "Na glebszej rzece wyskakuja delfiny. Na razie tylko obserwuja."
-        ],
-        facts: [
-          "Wiewiorka zapomina, gdzie schowala wiekszosc orzechow, i tak sadzi nowe drzewa."
+          "Delfiny skacza tam, gdzie woda jest gleboka. Dopoki skacza, las jeszcze zyje."
         ]
       },
       {
         name: "Bobr od Zapachow", x: 2368, y: 2592, r: 21,
         lines: [
-          "Kamery budza alarm, gdy wejdziesz w ich oko. Pod ziemia ida ich przewody.",
-          "Przetnij kabel kreta, a oko kamery robi sie slepe."
-        ],
-        facts: [
-          "Jez nosi na grzbiecie kilka tysiecy igiel i zwija sie w kulke, gdy sie boi."
+          "Bramy maja elektryczne tarcze. Bez kabla przegryzionego pod ziemia nawet najmocniejszy ogon nic im nie zrobi.",
+          "Kazdy sektor ma swoja nora i swoj kabel. Prad trzeba wygasic zanim przegryziesz przejscie."
         ]
       },
       {
         name: "Bobr Przeprawowy", x: 3968, y: 1472, r: 22,
         lines: [
           "Male rzeczki da sie oszukac deskami; dwie dobrze ulozone wystarcza.",
-          "W glebi krzakow ktos schowal butelke po bardzo nierozsadnym zielarzu."
-        ],
-        facts: [
-          "Mrowka uniesie ciezar nawet piecdziesiat razy wiekszy od siebie."
+          "Las pamieta kazdy swoj ksztalt. Maszyny go policzyly, lecz nigdy nie zrozumialy."
         ]
       },
       {
         name: "Bobr z Gorskiej Sciezki", x: 6208, y: 704, r: 22,
         lines: [
           "Gorskie serwerownie sa wieksze i pilnuje ich wiecej komputerow.",
-          "Nie wszystko trzeba gryzc. Czasem wystarczy przeczytac stara kartke w chacie."
-        ],
-        facts: [
-          "Jelen zrzuca poroze co roku i co roku zapuszcza nowe, wieksze."
+          "Im wyzej i dumniej brzeczy maszyna, tym mniej jest uwazna na bobra u jej stop."
         ]
       },
       {
         name: "Bobr Nad Rzeka", x: 7552, y: 2560, r: 22,
         lines: [
           "Za ostatnimi drzewami stoi data center, zamkniete elektryczna zaslona.",
-          "Zaslona opadnie, dopiero gdy padna wszystkie serwerownie w lesie."
-        ],
-        facts: [
-          "Delfiny spia tylko polowa mozgu naraz, zeby nigdy nie zapomniec, jak oddychac."
+          "Zaslona to nie sciana, lecz strach maszyny. Padnie, gdy padna wszystkie serwerownie."
+        ]
+      },
+      {
+        name: "Bobr Straznik", x: 5568, y: 4032, r: 23, guardian: true,
+        lines: [
+          "Dalej nie wpuszczam samotnych. Ukryte miejsca latwo myla mysli, a z towarzyszem wraca sie do domu.",
+          "Przyprowadz wiewiorke, sarenke albo innego przyjaciela. Wtedy odsunie sie zarosl przy masci."
         ]
       }
     ];
     for (const dam of MINI_DAMS) {
-      beavers.push({ name: dam.name, x: dam.bx, y: dam.by, r: 21, facts: dam.facts });
+      beavers.push({ name: dam.name, x: dam.bx, y: dam.by, r: 21, lines: dam.lines });
     }
-    return beavers.map((b) => ({ ...b, phase: rand() * TAU, talkCooldown: 0 }));
+    return beavers.map((b) => {
+      const open = findOpenSpot(b.x, b.y, b.r);
+      return { ...b, x: open.x, y: open.y, phase: rand() * TAU, talkCooldown: 0, lineIndex: 0 };
+    });
   }
 
   function makeMoles() {
@@ -923,7 +1246,7 @@
   }
 
   function makeWildlife() {
-    return [
+    const animals = [
       { type: "deer", x: 1376, y: 960, r: 22, phase: rand() * TAU, dir: 0.2 },
       { type: "hare", x: 2600, y: 1376, r: 12, phase: rand() * TAU, dir: -0.4 },
       { type: "fox", x: 3808, y: 2944, r: 16, phase: rand() * TAU, dir: 0.8 },
@@ -931,23 +1254,85 @@
       { type: "deer", x: 6784, y: 896, r: 22, phase: rand() * TAU, dir: 0.5 },
       { type: "hare", x: 8448, y: 2944, r: 12, phase: rand() * TAU, dir: 0.1 }
     ];
+    return animals.map((animal) => {
+      const open = findOpenSpot(animal.x, animal.y, animal.r + 6);
+      return { ...animal, x: open.x, y: open.y };
+    });
   }
 
   function makeCables() {
     return CABLE_DATA.map((cable) => ({ ...cable, cut: false, pulse: rand() * TAU }));
   }
 
+  function makeSecretHedges() {
+    const blocks = [];
+    for (const rect of SECRET_HEDGE_RECTS) {
+      for (let y = rect.y; y < rect.y + rect.h; y += TILE) {
+        for (let x = rect.x; x < rect.x + rect.w; x += TILE) {
+          blocks.push({
+            ...rect,
+            x,
+            y,
+            w: Math.min(TILE, rect.x + rect.w - x),
+            h: Math.min(TILE, rect.y + rect.h - y),
+            hp: 3,
+            maxHp: 3,
+            destroyed: false,
+            pulse: rand() * TAU
+          });
+        }
+      }
+    }
+    return blocks;
+  }
+
+  // True if a creature of radius r placed here would sit on water, a wall, a bush, a building, etc.
+  function spotBlocked(x, y, r) {
+    if (pointHitsAny(x, y, ALL_WATER_RECTS, r)) return true;
+    if (pointHitsAny(x, y, TERRAIN_SOLIDS, r)) return true;
+    if (pointHitsAny(x, y, SECRET_HEDGE_RECTS, r)) return true;
+    if (pointHitsAny(x, y, SERVER_SITE_RECTS, r)) return true;
+    if (pointInRect(x, y, DATA_CENTER, r)) return true;
+    for (const cabin of CABINS) if (pointInRect(x, y, cabin, r + 24)) return true;
+    for (const item of decor) {
+      if (item.chewed || item.type === "flower") continue;
+      const rad = item.type === "rock" ? item.r * 0.75 : item.r * 0.82;
+      if (Math.hypot(x - item.x, y - item.y) < r + rad) return true;
+    }
+    return false;
+  }
+
+  // Nudges a desired spawn point to the nearest spot that is not on water/walls/bushes/buildings.
+  function findOpenSpot(x, y, r) {
+    if (!spotBlocked(x, y, r)) return { x, y };
+    for (let ring = 1; ring <= 14; ring += 1) {
+      const rad = ring * 44;
+      for (let a = 0; a < 16; a += 1) {
+        const nx = x + Math.cos(a * TAU / 16) * rad;
+        const ny = y + Math.sin(a * TAU / 16) * rad;
+        if (nx < 220 || ny < 320 || nx > WORLD_W - 220 || ny > SURFACE_BOTTOM - 220) continue;
+        if (!spotBlocked(nx, ny, r)) return { x: nx, y: ny };
+      }
+    }
+    return { x, y };
+  }
+
   // Healthy, un-infected animals roaming the open forest; feed one a nut to gain a companion.
   function makeCritters() {
     const spots = [
-      { type: "rabbit", x: 1216, y: 912, r: 12 },
-      { type: "hedgehog", x: 2752, y: 2496, r: 12 },
-      { type: "fawn", x: 4288, y: 2816, r: 18 },
-      { type: "squirrel", x: 5632, y: 2384, r: 12 },
-      { type: "rabbit", x: 6912, y: 3008, r: 12 },
-      { type: "fawn", x: 8576, y: 3456, r: 18 }
+      { type: "rabbit", x: 1700, y: 900, r: 12 },
+      { type: "hedgehog", x: 2400, y: 2480, r: 12 },
+      { type: "fawn", x: 4400, y: 2780, r: 18 },
+      { type: "squirrel", x: 5050, y: 950, r: 12 },
+      { type: "rabbit", x: 7400, y: 900, r: 12 },
+      { type: "fawn", x: 8640, y: 3640, r: 18 },
+      { type: "squirrel", x: 5408, y: 3904, r: 13 },
+      { type: "rabbit", x: 10048, y: 896, r: 12 }
     ];
-    return spots.map((s) => ({ ...s, ox: s.x, oy: s.y, phase: rand() * TAU, dir: rand() * TAU, near: false }));
+    return spots.map((s) => {
+      const open = findOpenSpot(s.x, s.y, s.r + 6);
+      return { type: s.type, r: s.r, x: open.x, y: open.y, ox: open.x, oy: open.y, phase: rand() * TAU, dir: rand() * TAU, near: false };
+    });
   }
 
   function buildDecor() {
@@ -977,13 +1362,15 @@
         phase: rand() * TAU
       });
     }
-    // hand-placed chewable bushes inside the data centre give the player ranged cover
-    const dcBushes = [
-      [8224, 1760], [8224, 2240], [8576, 1312], [8960, 1312],
-      [8224, 2848], [8224, 1440], [9216, 1632], [8576, 2848]
-    ];
-    for (const [x, y] of dcBushes) {
-      items.push({ type: "bush", x, y, r: 24, chewable: true, chewed: false, species: null, hue: rand(), phase: rand() * TAU });
+    // No greenery is hand-placed inside the active data centre; it should feel mechanical until the boss falls.
+    // a clump of trees on the lake island so it reads as a little wooded isle
+    const islandTrees = [[3280, 2700], [3500, 2740], [3680, 2700], [3400, 2820], [3620, 2820]];
+    for (const [x, y] of islandTrees) {
+      items.push({ type: "bush", x, y, r: 30, chewable: false, chewed: false, species: null, hue: rand(), phase: rand() * TAU });
+    }
+    const lagoonIslandTrees = [[8680, 3548], [8560, 3548], [8928, 3988], [9024, 4112], [10240, 3904], [11136, 3904]];
+    for (const [x, y] of lagoonIslandTrees) {
+      items.push({ type: "bush", x, y, r: 28, chewable: false, chewed: false, species: null, hue: rand(), phase: rand() * TAU });
     }
     return items;
   }
@@ -1056,12 +1443,13 @@
       updatePickups(dt);
       updatePlanks(dt);
       updateStreams(dt);
-      updateSecurityCameras(dt);
       updateBlockers(dt);
       updateEnemies(dt);
       updateCritters(dt);
       updateFollowers(dt);
       updateDolphins(dt);
+      updateSharks(dt);
+      updateIntel(dt);
       updateWildlife(dt);
       updateBoss(dt);
       updateShots(dt);
@@ -1071,6 +1459,7 @@
       updateCaterpillars(dt);
       updateIntel(dt);
     }
+    resolveActorCollisions();
     updateParticles(dt);
     updateFloatText(dt);
     updateCamera(dt);
@@ -1143,13 +1532,17 @@
       dx /= length;
       dy /= length;
       p.facing = Math.atan2(dy, dx);
-      p.step += dt * 12;
     }
 
-    const waterBefore = game.area === "surface" && pointHitsAny(p.x, p.y, ALL_WATER_RECTS, p.r * 0.5);
-    const speed = p.speed * (p.shield > 0 ? 0.96 : 1) * (waterBefore ? 0.88 : 1) * (game.area === "underground" ? 0.92 : 1);
+    const waterBefore = playerInWater(p);
+    const wantsRun = keys.has("ShiftLeft") || keys.has("ShiftRight") || keys.has("KeyB");
+    const running = wantsRun && !waterBefore;
+    const speed = p.speed * (p.shield > 0 ? 0.96 : 1) * (waterBefore ? 0.88 : 1) * (game.area === "underground" ? 0.92 : 1) * (running ? 1.38 : 1);
+    p.running = !!(running && (dx || dy));
+    if (dx || dy) p.step += dt * (p.running ? 18 : 12);
     moveCircle(p, dx * speed * dt, dy * speed * dt);
-    p.swimming = game.area === "surface" && pointHitsAny(p.x, p.y, ALL_WATER_RECTS, p.r * 0.55);
+    p.swimming = playerInWater(p);
+    if (p.swimming) p.running = false;
     if (p.swimming) clearFollowers("water");
 
     if (!game.defenseAwake && game.introTimer <= 0) {
@@ -1162,7 +1555,7 @@
     p.feedCooldown = Math.max(0, p.feedCooldown - dt);
     p.useCooldown = Math.max(0, p.useCooldown - dt);
     p.hurtCooldown = Math.max(0, p.hurtCooldown - dt);
-    // spinach shield no longer ticks down; it holds until the beaver is hit
+    p.shield = Math.max(0, p.shield - dt); // spinach shield lasts about a minute
 
     if (keys.has("KeyE")) {
       if (!tryUseBurrow()) grabPlank();
@@ -1204,13 +1597,22 @@
       if (!hedge.destroyed) pushOutOfRect(entity, hedge);
     }
 
+    if (game.companionGate && !game.companionGate.open) pushOutOfRect(entity, game.companionGate);
+
+    for (const chest of game.chests) {
+      if (!chest.opened) pushOutOfRect(entity, chest);
+    }
+
     for (const cabin of game.cabins) {
       for (const wall of cabinWalls(cabin)) pushOutOfRect(entity, wall);
     }
 
     for (const wall of dataCenterWalls()) pushOutOfRect(entity, wall);
+    for (const rack of game.bossRacks || []) {
+      if (!rack.destroyed) pushOutOfRect(entity, rack);
+    }
 
-    if ((entity.type === "cat" || entity.type === "dog" || entity.type === "squirrel") && pointHitsAny(entity.x, entity.y, ALL_WATER_RECTS, entity.r * 0.8)) {
+    if (isSurfaceAnimalType(entity.type) && pointHitsAny(entity.x, entity.y, ALL_WATER_RECTS, entity.r * 0.8)) {
       entity.x = oldX;
       entity.y = oldY;
       entity.wander = (entity.wander || 0) + Math.PI * 0.7;
@@ -1223,6 +1625,7 @@
     for (const server of game.servers) {
       if (server.destroyed) continue;
       for (const wall of roomWalls(server)) pushOutOfRect(entity, wall);
+      if (!server.doorOpen) pushOutOfRect(entity, doorRect(server));
       for (const core of server.cores) {
         if (core.destroyed) continue;
         const push = entity.r + core.r * 0.82 - Math.hypot(entity.x - core.x, entity.y - core.y);
@@ -1262,7 +1665,7 @@
   function punch() {
     const p = game.player;
     if (p.punchCooldown > 0) return;
-    if (tryTalkToBeaver() || tryInteractCabin() || tryEatCaterpillar()) {
+    if (tryTalkToBeaver() || tryInteractCabin() || tryOpenChest() || tryEatCaterpillar()) {
       p.punchCooldown = 0.34;
       return;
     }
@@ -1277,7 +1680,7 @@
       y: p.y + Math.sin(p.facing) * biteReach,
       r: 24
     };
-    const damage = 1.7 + p.tailLevel * 0.34;
+    const damage = (1.7 + p.tailLevel * 0.34) * (p.goldTeeth ? 1.28 : 1);
 
     spawnArc(hit.x, hit.y, p.facing, palette.beaverDark);
     damageWorld(hit, damage, p.facing);
@@ -1316,7 +1719,7 @@
     plank.y = p.y + Math.sin(p.facing) * 30;
     plank.angle = 0;
     plank.bridgeStreamIndex = null;
-    const snapped = snapPlankToStream(plank);
+    const snapped = plank.metal ? false : snapPlankToStream(plank);
     if (!snapped) {
       // a resting plank settles flat in the centre of a tile
       plank.x = Math.floor(plank.x / TILE) * TILE + TILE / 2;
@@ -1377,11 +1780,12 @@
       vx: v.x,
       vy: v.y,
       r: 18,
-      damage: 6.4 + p.tailLevel * 0.35,
+      damage: p.heldPlank.metal ? 8.8 + p.tailLevel * 0.25 : 6.4 + p.tailLevel * 0.35,
       life: 1.45,
       angle: p.facing,
-      spin: 7,
-      color: palette.plank
+      spin: p.heldPlank.metal ? 9 : 7,
+      color: p.heldPlank.metal ? "#9ca7aa" : palette.plank,
+      metal: !!p.heldPlank.metal
     });
     p.heldPlank = null;
     camera.shake = Math.max(camera.shake, 3);
@@ -1459,6 +1863,8 @@
       chewCable(hit);
       return;
     }
+    if (hurtShark(hit, direction)) return;
+
     for (const enemy of game.enemies) {
       if (enemy.hp > 0 && circleHit(hit, enemy)) {
         hurtEnemy(enemy, damage, direction);
@@ -1471,7 +1877,9 @@
       }
     }
 
-    hurtSecretHedges(hit, damage);
+    if (hurtServerDoors(hit, damage)) return;
+    if (hurtBossRacks(hit, damage, direction)) return;
+    if (hurtSecretHedges(hit, damage, direction)) return;
 
     for (let i = 0; i < game.servers.length; i += 1) {
       const server = game.servers[i];
@@ -1510,7 +1918,61 @@
   }
 
 
-  function hurtSecretHedges(hit, damage) {
+  function hurtServerDoors(hit, damage) {
+    for (const server of game.servers) {
+      if (server.destroyed || server.doorOpen) continue;
+      const door = doorRect(server);
+      if (!rectCircleHit(hit, door, 9)) continue;
+      server.doorHp -= damage;
+      server.doorPulse += 1.1;
+      burst(hit.x, hit.y, 12, "#d9d1bd");
+      playTone("hit");
+      if (server.doorHp <= 0) {
+        server.doorOpen = true;
+        game.message = "DRZWI DO #" + server.num + " PRZEGRYZIONE";
+        game.messageTimer = 2;
+        burst(door.x + door.w / 2, door.y + door.h / 2, 30, palette.plank);
+        playTone("objectBreak");
+      } else {
+        game.message = "GRYZIESZ DRZWI #" + server.num;
+        game.messageTimer = 1.2;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  function makeWirePlate(x, y) {
+    return {
+      x, y, r: 24, w: 54, h: 28, taken: false, bob: rand() * TAU,
+      angle: rand() > 0.5 ? 0.08 : -0.08, bridgeStreamIndex: null, metal: true
+    };
+  }
+
+  function hurtBossRacks(hit, damage, direction) {
+    for (const rack of game.bossRacks || []) {
+      if (rack.destroyed || !rectCircleHit(hit, rack, 8)) continue;
+      rack.hp -= damage;
+      rack.pulse += 1.2;
+      burst(hit.x, hit.y, 12, "#9ca7aa");
+      playTone("hit");
+      if (rack.hp <= 0) {
+        rack.destroyed = true;
+        game.planks.push(makeWirePlate(rack.x + rack.w / 2 + Math.cos(direction) * 18, rack.y + rack.h / 2 + Math.sin(direction) * 18));
+        game.message = "RACK ROZBITY: BLACHA DRUCIANA";
+        game.messageTimer = 2;
+        burst(rack.x + rack.w / 2, rack.y + rack.h / 2, 32, "#9ca7aa");
+        playTone("objectBreak");
+      } else {
+        game.message = "RACK TRZESZCZY";
+        game.messageTimer = 1.1;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  function hurtSecretHedges(hit, damage, direction) {
     for (const hedge of game.hedges) {
       if (hedge.destroyed || !rectCircleHit(hit, hedge, 8)) continue;
       hedge.hp -= damage;
@@ -1519,9 +1981,12 @@
       playTone("hit");
       if (hedge.hp <= 0) {
         hedge.destroyed = true;
-        game.message = "KRZAKI PRZEGRYZIONE";
+        const plank = makePlank(hedge.x + hedge.w / 2 + Math.cos(direction) * 12, hedge.y + hedge.h / 2 + Math.sin(direction) * 12);
+        plank.angle = direction + 0.2;
+        game.planks.push(plank);
+        game.message = "KRZAK PRZEGRYZIONY: DREWNO";
         game.messageTimer = 1.8;
-        burst(hedge.x + hedge.w / 2, hedge.y + hedge.h / 2, 38, palette.leafLight);
+        burst(hedge.x + hedge.w / 2, hedge.y + hedge.h / 2, 28, palette.leafLight);
         playTone("objectBreak");
       }
       return true;
@@ -1529,7 +1994,23 @@
     return false;
   }
 
+  function cableCutForServer(index) {
+    return game.cables.some((cable) => cable.serverIndex === index && cable.cut);
+  }
+
+  function blockerPowered(blocker) {
+    return blocker.serverIndex !== null && blocker.serverIndex !== undefined && !cableCutForServer(blocker.serverIndex);
+  }
+
   function hurtBlocker(blocker, damage) {
+    if (blockerPowered(blocker)) {
+      blocker.pulse += 1.4;
+      game.message = "BRAMA POD NAPIECIEM: ZNAJDZ KABEL W NORZE";
+      game.messageTimer = 2.4;
+      burst(blocker.cx, blocker.cy, 12, palette.aiBlue);
+      playTone("blocked");
+      return;
+    }
     if (!blocker.awake) {
       blocker.awake = true;
       blocker.shootCooldown = 0.9;
@@ -1611,7 +2092,22 @@
     }
   }
 
+  function serverGuardsAlive(index) {
+    return game.enemies.filter((enemy) => enemy.serverIndex === index && enemy.hp > 0).length;
+  }
+
   function hurtServerCore(server, core, index, damage) {
+    const guards = serverGuardsAlive(index);
+    if (guards > 0) {
+      wakeDefense(index);
+      server.pulse += 0.7;
+      core.pulse += 0.8;
+      game.message = "#" + server.num + " " + server.name + ": NAJPIERW STRAZNICY (" + guards + ")";
+      game.messageTimer = 2.1;
+      burst(core.x, core.y, 8, palette.aiPink);
+      playTone("blocked");
+      return;
+    }
     wakeDefense(index);
     core.hp -= server.powered ? damage : damage * 1.35;
     core.pulse += 0.9;
@@ -1678,7 +2174,7 @@
     if (core.hp <= 0 && !core.destroyed) {
       core.destroyed = true;
       core.hp = 0;
-      burst(core.x, core.y, 40, palette.leafLight);
+      burst(core.x, core.y, 40, "#9ca7aa");
       camera.shake = Math.max(camera.shake, 10);
       playTone("objectBreak");
       const left = bossCoresLeftCount();
@@ -1730,8 +2226,10 @@
       server.destroyed = true;
       server.powered = false;
       for (const core of server.cores) core.destroyed = true;
+      server.doorOpen = true;
     }
     for (const core of game.bossCores) core.destroyed = true;
+    for (const rack of game.bossRacks || []) rack.destroyed = true;
     for (const blocker of game.blockers) {
       blocker.destroyed = true;
       blocker.awake = false;
@@ -1792,7 +2290,7 @@
           playTone("restore");
         } else {
           pickup.respawn = 24;
-          p.shield = 1;
+          p.shield = 60;
           game.message = "TARCZA ZE SZPINAKU";
           game.messageTimer = 1.9;
           burst(pickup.x, pickup.y, 28, palette.spinach);
@@ -1821,7 +2319,7 @@
     if (id !== "gem" && id !== "intel" && game.items.some((it) => it.id === id)) return;
     let entry;
     if (id === "gem") entry = { id: "gem", label: extra.label, desc: extra.desc, color: extra.color };
-    else if (id === "intel") entry = { id: "intel", label: extra.label, desc: extra.desc, color: "#9fe7ff" };
+    else if (id === "intel") entry = { id: "intel", label: extra.label, desc: extra.desc, color: extra.color || "#9fe7ff" };
     else entry = { id, ...ITEM_LIBRARY[id] };
     game.items.push(entry);
   }
@@ -1854,7 +2352,8 @@
       if (Math.hypot(critter.x - critter.ox, critter.y - critter.oy) > 150) critter.dir = angleTo(critter, { x: critter.ox, y: critter.oy });
       critter.x += Math.cos(critter.dir) * speed * dt;
       critter.y += Math.sin(critter.dir) * speed * dt;
-      if (pointHitsAny(critter.x, critter.y, ALL_WATER_RECTS, critter.r + 8) || pointHitsAny(critter.x, critter.y, TERRAIN_SOLIDS, critter.r + 6) || rectHitsAny({ x: critter.x - critter.r, y: critter.y - critter.r, w: critter.r * 2, h: critter.r * 2 }, SERVER_SITE_RECTS)) {
+      // never let a critter end up on water, a wall, a building or inside a bush
+      if (spotBlocked(critter.x, critter.y, critter.r + 4)) {
         critter.x = oldX;
         critter.y = oldY;
         critter.dir += Math.PI * 0.7;
@@ -1862,6 +2361,14 @@
       // a friendly prompt when you are close enough to feed it
       critter.near = Math.hypot(critter.x - p.x, critter.y - p.y) < 80;
     }
+  }
+
+  function enemyShotDelay(enemy) {
+    const base = enemy.type === "sentinel" ? 1.85 : 2.15;
+    const cleared = game.servers.filter((server) => server.destroyed).length;
+    if (enemy.serverIndex === null || cleared >= 4) return base * 0.78;
+    if (enemy.serverIndex >= 3) return base * 0.9;
+    return base;
   }
 
   function updateEnemies(dt) {
@@ -1913,7 +2420,7 @@
       }
 
       if (enemy.range > 0 && enemy.aggro && toPlayer < enemy.range && enemy.shootCooldown <= 0) {
-        enemy.shootCooldown = enemy.type === "sentinel" ? 1.85 : 2.15;
+        enemy.shootCooldown = enemyShotDelay(enemy);
         shootEnemy(enemy, p);
       }
 
@@ -1924,12 +2431,23 @@
 
     for (const critter of friendlyCritters) {
       critter.phase += dt * 3.4;
-      critter.life -= dt;
-      critter.x += Math.cos(critter.phase) * 9 * dt;
-      critter.y += Math.sin(critter.phase * 0.7) * 8 * dt;
+      if (!critter.permanent) critter.life -= dt;
+      const ox = critter.x;
+      const oy = critter.y;
+      const speed = critter.permanent ? 18 : 9;
+      if (critter.permanent && rand() < dt * 0.4) critter.dir = (critter.dir || 0) + (rand() - 0.5) * 1.2;
+      const ang = critter.permanent ? critter.dir : critter.phase;
+      critter.x += Math.cos(ang) * speed * dt;
+      critter.y += Math.sin(ang) * speed * dt;
+      // freed animals never wander onto water or into bushes/walls
+      if (spotBlocked(critter.x, critter.y, critter.r + 4)) {
+        critter.x = ox;
+        critter.y = oy;
+        if (critter.permanent) critter.dir += Math.PI * 0.7;
+      }
     }
     for (let i = friendlyCritters.length - 1; i >= 0; i -= 1) {
-      if (friendlyCritters[i].life <= 0) friendlyCritters.splice(i, 1);
+      if (!friendlyCritters[i].permanent && friendlyCritters[i].life <= 0) friendlyCritters.splice(i, 1);
     }
   }
 
@@ -1954,13 +2472,37 @@
     }
     if (!best || best.talkCooldown > 0) return false;
     best.talkCooldown = 1.3;
-    // Pick ONE short utterance (lore or a fun fact) and cap it at two sentences.
-    const pool = (best.facts && best.lines) ? (rand() < 0.5 ? best.facts : best.lines) : (best.lines || best.facts);
-    const line = pool[Math.floor(rand() * pool.length)];
+    if (best.guardian) {
+      const allowed = followers.length > 0;
+      if (allowed) {
+        game.companionGate.open = true;
+        game.message = best.name;
+        game.messageTimer = 4.2;
+        game.dialogLines = ["Widze, ze nie idziesz sam. Przejdz cicho - za zaroslem jest masc, ktorej maszyny nigdy nie potrafily nazwac."];
+        game.dialogTimer = 5.8;
+        playTone("restore");
+      } else {
+        game.message = best.name;
+        game.messageTimer = 4.2;
+        game.dialogLines = [best.lines[(best.lineIndex || 0) % best.lines.length]];
+        best.lineIndex = (best.lineIndex || 0) + 1;
+        game.dialogTimer = 5.8;
+        playTone("blocked");
+      }
+      p.facing = Math.atan2(best.y - p.y, best.x - p.x);
+      return true;
+    }
+    // Deterministic: each NPC cycles through its lines in order (no randomness in what it says).
+    const quotes = best.quotes;
+    const pool = quotes || best.lines || best.facts;
+    best.lineIndex = (best.lineIndex || 0);
+    const line = pool[best.lineIndex % pool.length];
+    best.lineIndex += 1;
     game.message = best.name;
     game.messageTimer = 4.2;
-    game.dialogLines = [capSentences(line, 2)];
-    game.dialogTimer = 5.4;
+    // the first beaver's Walden quotes are shown whole; everyone else stays within two sentences
+    game.dialogLines = [quotes ? line : capSentences(line, 2)];
+    game.dialogTimer = quotes ? 7 : 5.4;
     p.facing = Math.atan2(best.y - p.y, best.x - p.x);
     playTone("pickup");
     return true;
@@ -2039,9 +2581,15 @@
     return WATER_RECTS.find((rect) => pointInRect(x, y, rect, -inset));
   }
 
-  function spawnDolphinNearPlayer() {
+  function dolphinPathFitsWater(rect, x, y, dir, travel, margin = 36) {
+    const hx = Math.cos(dir) * travel * 0.5;
+    const hy = Math.sin(dir) * travel * 0.5;
+    return pointInRect(x - hx, y - hy, rect, -margin) && pointInRect(x + hx, y + hy, rect, -margin);
+  }
+
+  function spawnDolphinNearPlayer(targetRect) {
     const p = game.player;
-    const current = waterRectAt(p.x, p.y, 46);
+    const current = targetRect || waterRectAt(p.x, p.y, 46);
     const candidates = current ? [current] : WATER_RECTS.filter((rect) => rect.w >= 256 && rect.h >= 256);
     for (let i = 0; i < 10; i += 1) {
       const rect = candidates[Math.floor(rand() * candidates.length)];
@@ -2053,6 +2601,7 @@
       const y = horizontal ? rect.y + rect.h / 2 + (rand() - 0.5) * Math.max(0, rect.h - 140) : clamp(p.y + (rand() - 0.5) * 420, rect.y + margin, rect.y + rect.h - margin);
       if (!pointInRect(x, y, rect, -48)) continue;
       const dir = horizontal ? (rand() > 0.5 ? 0 : Math.PI) : (rand() > 0.5 ? Math.PI / 2 : -Math.PI / 2);
+      if (!dolphinPathFitsWater(rect, x, y, dir, travel, 36)) continue;
       dolphins.push({
         x,
         y,
@@ -2069,8 +2618,19 @@
 
   function updateDolphins(dt) {
     const p = game.player;
-    if (game.area === "surface" && p.swimming && (p.x > 3300 || p.y > 2600) && dolphins.length < 3 && rand() < dt * 0.22) {
-      spawnDolphinNearPlayer();
+    // dolphins leap rarely, and every jump must begin and end inside the same water body
+    const plainDolphins = dolphins.filter((d) => !d.golden).length;
+    if (game.area === "surface" && plainDolphins < 2 && rand() < dt * 0.03) {
+      let near = null;
+      let nd = 560;
+      for (const rect of WATER_RECTS) {
+        if (rect.w < 256 || rect.h < 256) continue;
+        const cx = clamp(p.x, rect.x, rect.x + rect.w);
+        const cy = clamp(p.y, rect.y, rect.y + rect.h);
+        const d = Math.hypot(p.x - cx, p.y - cy);
+        if (d < nd) { nd = d; near = rect; }
+      }
+      if (near) spawnDolphinNearPlayer(near);
     }
     for (const dolphin of dolphins) {
       dolphin.life -= dt;
@@ -2079,6 +2639,41 @@
     for (let i = dolphins.length - 1; i >= 0; i -= 1) {
       if (dolphins[i].life <= 0) dolphins.splice(i, 1);
     }
+  }
+
+  function updateSharks(dt) {
+    if (game.area !== "surface") return;
+    const p = game.player;
+    for (const shark of sharks) {
+      shark.t += dt;
+      shark.biteCooldown = Math.max(0, shark.biteCooldown - dt);
+      if (shark.x0 === undefined) { shark.x0 = shark.x; shark.y0 = shark.y; }
+      const u = (Math.sin((shark.t / shark.period) * TAU + shark.phase) + 1) * 0.5;
+      shark.cx = shark.x0 + Math.cos(shark.dir) * (u - 0.5) * shark.travel;
+      shark.cy = shark.y0 + Math.sin(shark.dir) * (u - 0.5) * shark.travel;
+      shark.drawDir = shark.dir + (Math.cos((shark.t / shark.period) * TAU + shark.phase) < 0 ? Math.PI : 0);
+      if (p.swimming && shark.biteCooldown <= 0 && Math.hypot(p.x - shark.cx, p.y - shark.cy) < p.r + shark.r + 4) {
+        shark.biteCooldown = 1.6;
+        game.message = "REKIN!";
+        game.messageTimer = 1.2;
+        hurtPlayer(1.1, angleTo({ x: shark.cx, y: shark.cy }, p), true);
+      }
+    }
+  }
+
+  function hurtShark(hit, direction) {
+    if (game.area !== "surface") return false;
+    for (const shark of sharks) {
+      const body = { x: shark.cx || shark.x, y: shark.cy || shark.y, r: shark.r };
+      if (!circleHit(hit, body, 6)) continue;
+      game.message = "NIE GRYZ REKINA";
+      game.messageTimer = 1.5;
+      hurtPlayer(1.0, direction + Math.PI, true);
+      burst(body.x, body.y, 16, "#9fb7bd");
+      playTone("hurt");
+      return true;
+    }
+    return false;
   }
 
   function updateMoles(dt) {
@@ -2092,14 +2687,31 @@
     const p = game.player;
     for (const spot of game.intel) {
       if (spot.taken) continue;
+      const area = spot.area || "underground";
+      if (area !== game.area) continue;
+      if (spot.underwater && !p.swimming) continue;
       if (Math.hypot(spot.x - p.x, spot.y - p.y) < 40) {
         spot.taken = true;
+        applyIntelEffect(spot);
         addItem("intel", spot);
         game.message = spot.label + " ZEBRANY";
         game.messageTimer = 2.4;
-        burst(spot.x, spot.y, 26, palette.aiBlue);
+        burst(spot.x, spot.y, 26, spot.color || palette.aiBlue);
         playTone("pickup");
       }
+    }
+  }
+
+  function applyIntelEffect(spot) {
+    const p = game.player;
+    if (spot.effect === "goldTeeth") {
+      p.goldTeeth = true;
+      game.dialogLines = ["Zlote zeby mocniej lapia rdzenie i pancerze. Gryzienie zadaje teraz wieksze obrazenia."];
+      game.dialogTimer = 4.8;
+    } else if (spot.effect === "tailOintment") {
+      p.tailLevel = Math.max(p.tailLevel + 1.4, p.tailLevel * 1.45);
+      game.dialogLines = ["Masc rozgrzewa ogon i sprawia, ze wydluza sie bardziej niz po zwyklych kwiatach."];
+      game.dialogTimer = 4.8;
     }
   }
 
@@ -2138,7 +2750,7 @@
       const speed = animal.type === "hare" ? 28 : animal.type === "deer" ? 18 : 16;
       animal.x += Math.cos(animal.dir) * speed * dt;
       animal.y += Math.sin(animal.dir) * speed * dt;
-      if (pointHitsAny(animal.x, animal.y, ALL_WATER_RECTS, animal.r + 10) || pointHitsAny(animal.x, animal.y, FOREST_WALL_RECTS, animal.r + 8)) {
+      if (spotBlocked(animal.x, animal.y, animal.r + 5)) {
         animal.x = oldX;
         animal.y = oldY;
         animal.dir += Math.PI * 0.65;
@@ -2152,11 +2764,11 @@
       cable.cut = true;
       if (cable.dataFeed) {
         game.dataFeedCut = true;
-        game.message = "DATA CENTER: KAMERY BEZ PRADU";
+        game.message = "DATA CENTER: ZASILANIE AWARYJNE PRZEGRYZIONE";
       } else {
         const server = game.servers[cable.serverIndex];
         if (server) server.powered = false;
-        game.message = server ? "#" + server.num + " " + server.name + ": KAMERY BEZ PRADU" : "KABEL PRZEGRYZIONY";
+        game.message = server ? "#" + server.num + " " + server.name + ": TARCZA BRAMY ZGASLA" : "KABEL PRZEGRYZIONY";
       }
       game.messageTimer = 2.3;
       burst(hit.x, hit.y, 34, palette.aiBlue);
@@ -2175,31 +2787,49 @@
       cabin.used = true;
       game.message = cabin.title;
       game.messageTimer = 4.8;
-      if (cabin.item === "book") {
-        p.book = true;
-        addItem("book");
-        game.dialogLines = ["Na wilgotnej stronie czytasz: kiedy las zapomina cisze, trzeba zaczac od odnalezienia zrodla brzeczenia."];
-        game.dialogTimer = 6.2;
-      } else if (cabin.item === "hat") {
-        p.hat = true;
-        addItem("hat");
-        game.dialogLines = ["Zakladasz czapke. Jest za duza i pachnie kurzem, ale wyglada dzielnie."];
-        game.dialogTimer = 4.2;
-      } else if (cabin.item === "boots") {
-        p.boots = true;
-        addItem("boots");
-        game.dialogLines = ["Buty sa ludzkie i kompletnie niepraktyczne dla bobra. Mimo to przez chwile czujesz sie elegancko."];
-        game.dialogTimer = 4.8;
-      } else if (cabin.item === "flashlight") {
-        p.tailLight = true;
-        addItem("flashlight");
-        game.dialogLines = ["Zapinasz latarke na ogon. Teraz w norach widzisz znacznie dalej niz dotad."];
-        game.dialogTimer = 5;
+      if (cabin.item && ITEM_LIBRARY[cabin.item]) {
+        if (cabin.item === "hat") p.hat = true;
+        if (cabin.item === "boots") p.boots = true;
+        if (cabin.item === "book") p.book = true;
+        if (cabin.item === "flashlight") p.tailLight = true;
+        if (cabin.item === "key") p.key = true;
+        addItem(cabin.item);
+        game.dialogLines = [ITEM_LIBRARY[cabin.item].desc];
+        game.dialogTimer = 6.4;
       } else {
         game.dialogLines = ["Pusty dom na skraju lasu. Ktos tu kiedys mieszkal, zanim maszyny zajely sie liczeniem drzew."];
         game.dialogTimer = 4.6;
       }
       playTone("pickup");
+      return true;
+    }
+    return false;
+  }
+
+  function hasItem(id) {
+    return game.items.some((item) => item.id === id);
+  }
+
+  function tryOpenChest() {
+    if (game.area !== "surface") return false;
+    const p = game.player;
+    for (const chest of game.chests) {
+      const near = p.x > chest.x - 34 && p.x < chest.x + chest.w + 34 && p.y > chest.y - 34 && p.y < chest.y + chest.h + 34;
+      if (!near || chest.opened) continue;
+      if (!hasItem(chest.key)) {
+        game.message = "SKRZYNIA ZAMKNIETA: POTRZEBNY KLUCZ";
+        game.messageTimer = 2;
+        playTone("blocked");
+        return true;
+      }
+      chest.opened = true;
+      addItem(chest.item);
+      game.message = chest.title + " OTWARTA";
+      game.messageTimer = 2.4;
+      game.dialogLines = [ITEM_LIBRARY[chest.item].desc];
+      game.dialogTimer = 5.4;
+      burst(chest.x + chest.w / 2, chest.y + chest.h / 2, 34, "#ffd66d");
+      playTone("restore");
       return true;
     }
     return false;
@@ -2281,15 +2911,16 @@
         game.messageTimer = 2.1;
         playTone("restore");
       }
-      // a golden dolphin leaps over the bridge every 10-15s
-      if (stream.bridged) {
+      // as soon as ONE board lies across the stream (a footbridge), a golden dolphin leaps over
+      // it rarely; no need for a full two-plank bridge
+      if (planks.length >= 1) {
         stream.goldenTimer -= dt;
         if (stream.goldenTimer <= 0) {
-          stream.goldenTimer = 10 + rand() * 5;
+          stream.goldenTimer = 95 + rand() * 50;
           spawnGoldenDolphin(stream, planks);
         }
       } else {
-        stream.goldenTimer = 10 + rand() * 5;
+        if (stream.goldenTimer < 20) stream.goldenTimer = 35 + rand() * 45;
       }
     }
   }
@@ -2297,16 +2928,24 @@
   function spawnGoldenDolphin(stream, planks) {
     const plank = planks[Math.floor(rand() * planks.length)] || { x: stream.x + stream.w / 2, y: stream.y + stream.h / 2 };
     const horizontal = stream.w > stream.h;
+    const x = horizontal ? plank.x : stream.x + stream.w / 2;
+    const y = horizontal ? stream.y + stream.h / 2 : plank.y;
+    const room = horizontal ? Math.min(x - stream.x, stream.x + stream.w - x) : Math.min(y - stream.y, stream.y + stream.h - y);
+    const travel = Math.min(260, room * 2 - 96);
+    if (travel < 110) return false;
+    const dir = horizontal ? (rand() > 0.5 ? 0 : Math.PI) : (rand() > 0.5 ? Math.PI / 2 : -Math.PI / 2);
+    if (!dolphinPathFitsWater(stream, x, y, dir, travel, 24)) return false;
     dolphins.push({
-      x: plank.x,
-      y: plank.y,
-      dir: horizontal ? Math.PI / 2 : 0,
-      travel: horizontal ? stream.h + 120 : stream.w + 120,
+      x,
+      y,
+      dir,
+      travel,
       life: 1.9,
       maxLife: 1.9,
       phase: rand() * TAU,
       golden: true
     });
+    return true;
   }
 
   function shootEnemy(enemy, target) {
@@ -2338,13 +2977,13 @@
     const p = game.player;
     const d = dist(boss, p);
     if (!game.defenseAwake) return;
-    if (d < 520 && boss.shootCooldown <= 0) {
+    if (d < 720 && boss.shootCooldown <= 0) {
       const exposed = bossCoresLeftCount() === 0;
-      boss.shootCooldown = exposed ? 1.25 : 1.75;
-      const waves = exposed ? 2 : 1;
+      boss.shootCooldown = exposed ? 0.72 : 1.05;
+      const waves = exposed ? 3 : 2;
       for (let i = 0; i < waves; i += 1) {
         const a = angleTo(boss, p) + (i - (waves - 1) / 2) * 0.28;
-        const v = vectorFromAngle(a, exposed ? 215 : 180);
+        const v = vectorFromAngle(a, exposed ? 245 : 205);
         enemyShots.push({
           x: boss.x + Math.cos(a) * 54,
           y: boss.y + Math.sin(a) * 54,
@@ -2426,6 +3065,25 @@
         }
       }
       if (shot.life > 0) {
+        for (const server of game.servers) {
+          if (server.destroyed || server.doorOpen) continue;
+          if (rectCircleHit(shot, doorRect(server), 6)) {
+            hurtServerDoors(shot, shot.damage);
+            shot.life = -1;
+            break;
+          }
+        }
+      }
+      if (shot.life > 0) {
+        for (const rack of game.bossRacks || []) {
+          if (!rack.destroyed && rectCircleHit(shot, rack, 6)) {
+            hurtBossRacks(shot, shot.damage, Math.atan2(shot.vy, shot.vx));
+            shot.life = -1;
+            break;
+          }
+        }
+      }
+      if (shot.life > 0) {
         for (let i = 0; i < game.servers.length && shot.life > 0; i += 1) {
           const server = game.servers[i];
           if (server.destroyed) continue;
@@ -2465,6 +3123,14 @@
         shot.life = -1;
         continue;
       }
+      for (const rack of game.bossRacks || []) {
+        if (!rack.destroyed && rectCircleHit(shot, rack, 0)) {
+          burst(shot.x, shot.y, 6, shot.color);
+          shot.life = -1;
+          break;
+        }
+      }
+      if (shot.life <= 0) continue;
       if (circleHit(shot, game.player)) {
         hurtPlayer(shot.damage, Math.atan2(shot.vy, shot.vx), shot.force);
         shot.life = -1;
@@ -2490,15 +3156,13 @@
     p.hurtCooldown = 0.78;
     clearFollowers("hurt");
     if (p.shield > 0) {
-      // the spinach shield holds until the first hit, then shatters and is gone
-      p.shield = 0;
-      burst(p.x, p.y, 20, palette.spinach);
+      // while the minute-long spinach shield holds, most of the hit is absorbed
+      burst(p.x, p.y, 12, palette.spinach);
       playTone("blocked");
-      game.message = "TARCZA PEKLA";
-      game.messageTimer = 1.2;
-      camera.shake = Math.max(camera.shake, 4);
+      p.hp -= damage * 0.2;
       p.x += Math.cos(direction) * 8;
       p.y += Math.sin(direction) * 8;
+      camera.shake = Math.max(camera.shake, 3);
       return;
     }
     burst(p.x, p.y, 14, palette.red);
@@ -2546,10 +3210,22 @@
     camera.shake = Math.max(0, camera.shake - dt * 28);
   }
 
+  // viewport rectangle (with margin) recomputed each frame; used to cull off-screen drawing
+  const view = { x0: 0, y0: 0, x1: 0, y1: 0 };
+  function inView(x, y, w, h) {
+    return x < view.x1 && x + w > view.x0 && y < view.y1 && y + h > view.y0;
+  }
+
   function render() {
     resize();
     const size = screenSize();
     ctx.clearRect(0, 0, size.w, size.h);
+
+    const margin = 140;
+    view.x0 = camera.x - margin;
+    view.y0 = camera.y - margin;
+    view.x1 = camera.x + size.w + margin;
+    view.y1 = camera.y + size.h + margin;
 
     const shakeX = camera.shake ? (rand() - 0.5) * camera.shake : 0;
     const shakeY = camera.shake ? (rand() - 0.5) * camera.shake : 0;
@@ -2575,14 +3251,18 @@
       drawCabins();
       drawBurrows();
       drawPickups();
-      drawGems();
       drawPlanks();
+      drawShipwrecks();
       drawDolphins();
+      drawSharks();
+      drawIntel();
       drawNpcs();
       drawCritters();
-      drawSecurityCameras();
+      drawCompanionGate();
+      drawChests();
       drawBlockers();
       drawServers();
+      drawGems();
       drawFriendlyCritters();
       drawFollowers();
       drawWildlife();
@@ -2623,6 +3303,7 @@
     drawSmallStreamEffects();
 
     for (const dot of terrainDots) {
+      if (!inView(dot.x, dot.y, dot.r, dot.r)) continue;
       ctx.fillStyle = dot.c;
       ctx.fillRect(Math.round(dot.x), Math.round(dot.y), Math.max(1, Math.round(dot.r)), Math.max(1, Math.round(dot.r)));
     }
@@ -2656,12 +3337,16 @@
         const tile = { x, y, w: TILE, h: TILE };
         const water = rectHitsAny(tile, ALL_WATER_RECTS);
         const road = rectHitsAny(tile, ROAD_RECTS);
-        const mountain = !water && !road && (x > 6400 || y > 4200 || (x > 5200 && y > 3000));
+        const beach = !water && !road && x < 1728 && y < 3328;
+        const meadow = !water && !road && x < 2600 && y < 3328;
+        const mountain = !water && !road && (x > 9200 || y > 4200 || (x > 7200 && y > 3000));
         const h = tileHash(x, y);
         if (water) {
           ctx.fillStyle = h > 0.5 ? "#2b5a72" : "#315d73";
         } else if (road) {
           ctx.fillStyle = game.worldRestored ? (h > 0.5 ? "#557a48" : "#486f42") : (h > 0.5 ? "#735f43" : "#66523b");
+        } else if (beach) {
+          ctx.fillStyle = h > 0.55 ? "#cfae75" : "#d9bd83";
         } else if (mountain) {
           ctx.fillStyle = h > 0.72 ? "#68706b" : h > 0.38 ? palette.mountain : "#46514f";
         } else {
@@ -2678,6 +3363,14 @@
           ctx.fillStyle = "rgba(245, 238, 209, 0.08)";
           ctx.fillRect(x + 8, y + 8, TILE - 16, 8);
           ctx.fillRect(x + 8, y + 48, TILE - 16, 5);
+        } else if (beach) {
+          ctx.fillStyle = "rgba(109, 89, 65, 0.16)";
+          ctx.fillRect(x + 12, y + 18, 9, 5);
+          ctx.fillRect(x + 40, y + 44, 7, 4);
+          if (meadow && h > 0.7) {
+            ctx.fillStyle = "rgba(126, 203, 119, 0.26)";
+            ctx.fillRect(x + 22, y + 10, 12, 24);
+          }
         } else if (mountain) {
           ctx.fillStyle = h > 0.76 ? palette.snow : "rgba(17, 24, 23, 0.28)";
           ctx.fillRect(x + 12, y + 10, 18, 12);
@@ -2776,24 +3469,20 @@
   function drawSecretHedge(hedge) {
     ctx.save();
     if (hedge.destroyed) {
-      drawGridRect(hedge.x, hedge.y, hedge.w, hedge.h, "rgba(66, 111, 69, 0.48)", "rgba(24, 80, 36, 0.3)");
-      for (let x = hedge.x + 28; x < hedge.x + hedge.w; x += 46) {
-        for (let y = hedge.y + 30; y < hedge.y + hedge.h; y += 46) drawTinyFlower({ x, y, phase: x + y }, true);
-      }
+      drawGridRect(hedge.x, hedge.y, hedge.w, hedge.h, "rgba(66, 111, 69, 0.36)", "rgba(24, 80, 36, 0.24)");
+      ctx.fillStyle = "#2d7f39";
+      ctx.fillRect(hedge.x + 14, hedge.y + hedge.h / 2 - 5, hedge.w - 28, 10);
       ctx.restore();
       return;
     }
     hedge.pulse += 0.025;
     drawGridRect(hedge.x, hedge.y, hedge.w, hedge.h, "#12351f", "rgba(4, 9, 6, 0.66)");
-    ctx.beginPath();
-    ctx.rect(hedge.x, hedge.y, hedge.w, hedge.h);
-    ctx.clip();
-    for (let y = hedge.y; y < hedge.y + hedge.h; y += TILE) {
-      for (let x = hedge.x; x < hedge.x + hedge.w; x += TILE) drawBushTile(x, y, false, false);
-    }
-    // only the faintest shimmer hints there is something behind these particular bushes
-    ctx.fillStyle = `rgba(136, 255, 118, ${0.04 + Math.max(0, Math.sin(game.time * 1.3 + hedge.pulse)) * 0.04})`;
-    ctx.fillRect(hedge.x + 8, hedge.y + 8, hedge.w - 16, hedge.h - 16);
+    drawBushTile(hedge.x, hedge.y, false, false);
+    ctx.strokeStyle = `rgba(126, 203, 119, ${0.48 + Math.sin(hedge.pulse) * 0.18})`;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(hedge.x + 6, hedge.y + 6, hedge.w - 12, hedge.h - 12);
+    ctx.fillStyle = "rgba(245, 238, 209, 0.56)";
+    ctx.fillRect(hedge.x + hedge.w / 2 - 5, hedge.y + 8, 10, 9);
     ctx.restore();
   }
 
@@ -2854,17 +3543,7 @@
     ctx.save();
     drawGridRect(d.x, d.y, d.w, d.h, "#252d30", "rgba(105, 215, 255, 0.13)");
 
-    const bossOuter = { x: BOSS_ROOM.x - TILE, y: BOSS_ROOM.y - TILE, w: BOSS_ROOM.w + TILE * 2, h: BOSS_ROOM.h + TILE * 2 };
-    for (let y = d.y + TILE * 2; y < d.y + d.h - TILE * 2; y += TILE * 3) {
-      for (let x = d.x + TILE * 2; x < d.x + d.w - TILE * 3; x += TILE * 3) {
-        const rk = { x, y, w: TILE, h: TILE * 2 };
-        if (rectsOverlap(rk, bossOuter)) continue;
-        if (rectsOverlap(rk, game.curtain)) continue;
-        if (game.bossCores.some((c) => Math.hypot(x + 32 - c.x, y + 64 - c.y) < TILE * 1.7)) continue;
-        drawRack(x, y, pulse, true);
-      }
-    }
-
+    drawBossRacks(pulse);
     drawBossCores();
     drawBossRoom();
 
@@ -2882,34 +3561,53 @@
   function drawBossCores() {
     const t = game.time;
     for (const core of game.bossCores) {
-      const x = Math.round(core.x);
-      const y = Math.round(core.y);
-      if (core.destroyed) {
-        ctx.fillStyle = "#2d6e39";
-        ctx.fillRect(x - 22, y + 6, 44, 12);
-        drawTinyFlower({ x, y: y - 6, phase: x + y }, true);
-        continue;
-      }
-      const pulse = Math.sin(t * 5 + core.pulse) * 0.5 + 0.5;
-      // boss cores glow violet/amber, clearly different from the blue racks
-      ctx.fillStyle = "#1a1422";
-      ctx.fillRect(x - 24, y - 30, 48, 60);
-      ctx.fillStyle = "#2a2036";
-      ctx.fillRect(x - 18, y - 24, 36, 48);
-      ctx.fillStyle = palette.aiViolet;
-      ctx.globalAlpha = 0.5 + pulse * 0.45;
-      for (let yy = y - 18; yy < y + 22; yy += 12) ctx.fillRect(x - 13, yy, 26, 6);
-      ctx.globalAlpha = 1;
-      ctx.strokeStyle = `rgba(255, 198, 90, ${0.5 + pulse * 0.4})`;
-      ctx.lineWidth = 3;
-      ctx.strokeRect(x - 24.5, y - 30.5, 48, 60);
-      ctx.fillStyle = "rgba(255, 198, 90, 0.9)";
-      ctx.fillRect(x - 4, y - 40 - pulse * 4, 8, 8);
-      ctx.fillStyle = "rgba(241, 91, 91, 0.82)";
-      ctx.fillRect(x - 22, y + 34, 44, 5);
-      ctx.fillStyle = palette.flower;
-      ctx.fillRect(x - 22, y + 34, 44 * (core.hp / core.maxHp), 5);
+      const rect = { x: core.x - TILE / 2, y: core.y - TILE * 0.75, w: TILE, h: TILE * 1.5, hp: core.hp, maxHp: core.maxHp, destroyed: core.destroyed, pulse: core.pulse };
+      const blink = Math.sin(t * 8 + core.pulse) * 0.5 + 0.5;
+      drawBossRackShape(rect, { mandatory: true, blink });
     }
+  }
+
+  function drawBossRacks(pulse) {
+    for (const rack of game.bossRacks || []) drawBossRackShape(rack, { pulse, mandatory: false });
+  }
+
+  function drawBossRackShape(rack, opts = {}) {
+    const destroyed = rack.destroyed;
+    const mandatory = !!opts.mandatory;
+    const x = Math.round(rack.x);
+    const y = Math.round(rack.y);
+    if (destroyed) {
+      ctx.fillStyle = "#3d4446";
+      ctx.fillRect(x + 6, y + rack.h - 24, rack.w - 12, 16);
+      ctx.fillStyle = "#889397";
+      ctx.fillRect(x + 14, y + rack.h - 40, rack.w - 28, 9);
+      ctx.fillRect(x + 8, y + rack.h - 56, rack.w - 16, 6);
+      return;
+    }
+    const p = opts.blink !== undefined ? opts.blink : (0.35 + Math.sin(game.time * 2.8 + rack.pulse) * 0.12);
+    ctx.save();
+    shadow(x + rack.w / 2, y + rack.h + 8, rack.w * 0.48, 9);
+    ctx.fillStyle = mandatory ? "#141d23" : "#1d2528";
+    ctx.fillRect(x, y, rack.w, rack.h);
+    ctx.strokeStyle = mandatory ? `rgba(105, 215, 255, ${0.35 + p * 0.45})` : "rgba(160, 176, 176, 0.32)";
+    ctx.lineWidth = mandatory ? 3 : 2;
+    ctx.strokeRect(x + 0.5, y + 0.5, rack.w - 1, rack.h - 1);
+    ctx.fillStyle = "#0b1014";
+    for (let yy = y + 14; yy < y + rack.h - 12; yy += 28) ctx.fillRect(x + 9, yy, rack.w - 18, 12);
+    for (let yy = y + 18; yy < y + rack.h - 10; yy += 28) {
+      ctx.fillStyle = mandatory ? `rgba(105, 215, 255, ${0.25 + p * 0.75})` : "rgba(241, 91, 91, 0.74)";
+      ctx.fillRect(x + 14, yy, 7, 6);
+      ctx.fillRect(x + 28, yy, 7, 6);
+      ctx.fillStyle = mandatory ? `rgba(228, 84, 154, ${0.25 + (1 - p) * 0.65})` : "rgba(241, 91, 91, 0.55)";
+      ctx.fillRect(x + 43, yy, 7, 6);
+    }
+    if (mandatory) {
+      ctx.fillStyle = "rgba(241, 91, 91, 0.82)";
+      ctx.fillRect(x, y + rack.h + 7, rack.w, 7);
+      ctx.fillStyle = palette.flower;
+      ctx.fillRect(x, y + rack.h + 7, rack.w * (rack.hp / rack.maxHp), 7);
+    }
+    ctx.restore();
   }
 
   function drawBossRoom() {
@@ -3017,11 +3715,15 @@
       }
       const iy = cabin.y + cabin.h - 78;
       ctx.fillStyle = cabin.used ? "#324b34" : "#d4a15b";
-      if (cabin.item === "book") {
+      if (cabin.item === "book" || cabin.item === "letter1" || cabin.item === "letter2" || cabin.item === "journal1" || cabin.item === "logbook" || cabin.item === "manual" || cabin.item === "lastNote") {
         ctx.fillRect(cabin.x + 42, iy, 30, 22);
         ctx.fillStyle = "#f5eed1";
         ctx.fillRect(cabin.x + 46, iy + 4, 10, 14);
         ctx.fillRect(cabin.x + 58, iy + 4, 10, 14);
+      } else if (cabin.item === "key") {
+        ctx.fillStyle = cabin.used ? "#324b34" : "#ffd66d";
+        ctx.fillRect(cabin.x + 48, iy + 8, 28, 8);
+        ctx.fillRect(cabin.x + 72, iy + 4, 8, 16);
       } else if (cabin.item === "hat") {
         ctx.fillRect(cabin.x + 42, iy + 4, 36, 8);
         ctx.fillRect(cabin.x + 52, iy - 10, 16, 16);
@@ -3075,6 +3777,56 @@
     for (const burrow of BURROWS) {
       drawCaveEntrance(burrow.x, burrow.y, false);
       if (Math.hypot(game.player.x - burrow.x, game.player.y - burrow.y) < 92) drawWorldHint(burrow.x, burrow.y - 78, "E");
+    }
+  }
+
+  function drawChests() {
+    for (const chest of game.chests) {
+      const x = chest.x;
+      const y = chest.y;
+      shadow(x + chest.w / 2, y + chest.h, 36, 8);
+      ctx.fillStyle = chest.opened ? "#5b3a24" : "#7a4b2c";
+      ctx.fillRect(x, y + 12, chest.w, chest.h - 12);
+      ctx.fillStyle = chest.opened ? "#3d2819" : "#a66b36";
+      ctx.fillRect(x + 6, y, chest.w - 12, 20);
+      ctx.fillStyle = chest.opened ? "#335c35" : "#ffd66d";
+      ctx.fillRect(x + chest.w / 2 - 5, y + 28, 10, 12);
+      if (!chest.opened && Math.hypot(game.player.x - (x + chest.w / 2), game.player.y - (y + chest.h / 2)) < 82) drawWorldHint(x + chest.w / 2, y - 14, "SPACJA");
+    }
+  }
+
+  function drawCompanionGate() {
+    const gate = game.companionGate;
+    if (!gate) return;
+    ctx.save();
+    if (gate.open) {
+      drawGridRect(gate.x, gate.y, gate.w, gate.h, "rgba(80, 132, 75, 0.46)", "rgba(126, 203, 119, 0.26)");
+      ctx.restore();
+      return;
+    }
+    drawGridRect(gate.x, gate.y, gate.w, gate.h, "#12351f", "rgba(4, 9, 6, 0.66)");
+    for (let y = gate.y; y < gate.y + gate.h; y += TILE) drawBushTile(gate.x, y, false, false);
+    ctx.strokeStyle = "rgba(245, 238, 209, 0.4)";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(gate.x + 5, gate.y + 5, gate.w - 10, gate.h - 10);
+    ctx.restore();
+  }
+
+  function drawShipwrecks() {
+    for (const wreck of SHIPWRECKS) {
+      ctx.save();
+      ctx.globalAlpha = 0.78;
+      shadow(wreck.x + wreck.w / 2, wreck.y + wreck.h / 2 + 24, wreck.w * 0.44, 12);
+      ctx.translate(wreck.x + wreck.w / 2, wreck.y + wreck.h / 2);
+      ctx.rotate(-0.18);
+      ctx.fillStyle = "#6d4b31";
+      ctx.fillRect(-wreck.w / 2, -18, wreck.w, 36);
+      ctx.fillStyle = "#3e2c20";
+      ctx.fillRect(-wreck.w / 2 + 18, -28, 18, 56);
+      ctx.fillRect(12, -30, 15, 60);
+      ctx.fillStyle = "rgba(105, 215, 255, 0.22)";
+      ctx.fillRect(-wreck.w / 2 + 8, 20, wreck.w - 16, 7);
+      ctx.restore();
     }
   }
 
@@ -3285,21 +4037,57 @@
   function drawIntel() {
     for (const spot of game.intel) {
       if (spot.taken) continue;
+      const area = spot.area || "underground";
+      if (area !== game.area) continue;
+      if (!inView(spot.x - 24, spot.y - 24, 48, 48)) continue;
       const x = Math.round(spot.x);
-      const y = Math.round(spot.y + Math.sin(game.time * 2 + spot.x) * 2);
-      const glow = 0.5 + Math.sin(game.time * 4 + spot.x) * 0.5;
-      ctx.fillStyle = "#1c2a30";
-      ctx.fillRect(x - 12, y - 10, 24, 20);
-      ctx.fillStyle = `rgba(159, 231, 255, ${0.5 + glow * 0.4})`;
-      ctx.fillRect(x - 8, y - 6, 16, 12);
-      ctx.fillStyle = "#0c1418";
-      for (let i = -6; i <= 6; i += 4) ctx.fillRect(x + i, y - 14, 2, 5);
-      ctx.fillStyle = palette.cream;
+      const y = Math.round(spot.y + Math.sin(game.time * 2 + spot.pulse) * (spot.underwater ? 1 : 2));
+      const glow = 0.5 + Math.sin(game.time * 4 + spot.pulse) * 0.5;
+      ctx.save();
+      if (spot.underwater) ctx.globalAlpha = game.player.swimming ? 0.58 : 0.28;
+      const c = spot.color || "#9fe7ff";
+      if (spot.label.includes("ZAB")) {
+        ctx.fillStyle = c;
+        ctx.fillRect(x - 11, y - 12, 22, 24);
+        ctx.fillStyle = "rgba(245, 238, 209, 0.8)";
+        ctx.fillRect(x - 4, y - 7, 8, 12);
+      } else if (spot.label.includes("KOSC")) {
+        ctx.fillStyle = c;
+        ctx.fillRect(x - 18, y - 5, 36, 10);
+        ctx.fillRect(x - 22, y - 9, 10, 18);
+        ctx.fillRect(x + 12, y - 9, 10, 18);
+      } else if (spot.label.includes("PIENIAZEK")) {
+        ctx.fillStyle = c;
+        ctx.beginPath();
+        ctx.arc(x, y, 13, 0, TAU);
+        ctx.fill();
+        ctx.fillStyle = "rgba(92,57,36,0.35)";
+        ctx.fillRect(x - 4, y - 8, 8, 16);
+      } else if (spot.label.includes("NOGA")) {
+        ctx.fillStyle = c;
+        ctx.fillRect(x - 8, y - 18, 16, 36);
+        ctx.fillStyle = "#5c3924";
+        ctx.fillRect(x - 14, y + 12, 28, 8);
+      } else if (spot.label.includes("MASC")) {
+        ctx.fillStyle = "#2a3b26";
+        ctx.fillRect(x - 12, y - 14, 24, 28);
+        ctx.fillStyle = c;
+        ctx.fillRect(x - 8, y - 8, 16, 16);
+      } else {
+        ctx.fillStyle = "#1c2a30";
+        ctx.fillRect(x - 12, y - 10, 24, 20);
+        ctx.fillStyle = `rgba(159, 231, 255, ${0.5 + glow * 0.4})`;
+        ctx.fillRect(x - 8, y - 6, 16, 12);
+        ctx.fillStyle = "#0c1418";
+        for (let i = -6; i <= 6; i += 4) ctx.fillRect(x + i, y - 14, 2, 5);
+      }
+      ctx.fillStyle = spot.underwater ? "rgba(245, 238, 209, 0.56)" : palette.cream;
       ctx.font = "700 9px Inter, system-ui, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("INTEL", x, y + 24);
+      ctx.fillText(spot.underwater ? "?" : "INTEL", x, y + 24);
       ctx.textAlign = "left";
-      if (Math.hypot(game.player.x - spot.x, game.player.y - spot.y) < 60) drawWorldHint(x, y - 26, "ZBIERZ");
+      ctx.restore();
+      if (Math.hypot(game.player.x - spot.x, game.player.y - spot.y) < 60 && (!spot.underwater || game.player.swimming)) drawWorldHint(x, y - 26, "ZBIERZ");
     }
   }
 
@@ -3372,6 +4160,7 @@
   function drawDecor() {
     const sorted = decor.slice().sort((a, b) => a.y - b.y);
     for (const item of sorted) {
+      if (!inView(item.x - item.r, item.y - item.r, item.r * 2, item.r * 2)) continue;
       const clean = isRestoredAt(item.x, item.y) || game.state === "won";
       if (item.type === "bush") drawBush(item, clean);
       if (item.type === "rock") drawRock(item, clean);
@@ -3418,6 +4207,13 @@
     ctx.arc(x + r * 0.34, y - r * 0.12, r * 0.16, 0, TAU);
     ctx.fill();
     ctx.globalAlpha = 1;
+    if (intense) {
+      ctx.strokeStyle = "rgba(245, 238, 209, 0.38)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x - r - 4, y - r - 4, r * 2 + 8, r * 2 + 8);
+      ctx.fillStyle = "rgba(245, 238, 209, 0.55)";
+      ctx.fillRect(x - 4, y - r - 12, 8, 8);
+    }
     ctx.restore();
   }
 
@@ -3502,7 +4298,8 @@
   function drawPlanks() {
     for (const plank of game.planks) {
       if (plank.taken) continue;
-      if (plank.bridgeStreamIndex !== null && plank.bridgeStreamIndex !== undefined) drawBridgePlank(plank);
+      if (plank.metal) drawWirePlate(plank.x, plank.y, plank.angle, 1);
+      else if (plank.bridgeStreamIndex !== null && plank.bridgeStreamIndex !== undefined) drawBridgePlank(plank);
       else drawPlank(plank.x, plank.y, plank.angle, 1);
     }
   }
@@ -3526,6 +4323,27 @@
       ctx.fillRect(-stream.w / 2 - 10, -5, stream.w + 20, 4);
       ctx.fillRect(-stream.w / 2 - 4, 3, stream.w + 8, 4);
     }
+    ctx.restore();
+  }
+
+  function drawWirePlate(x, y, angle, scale = 1) {
+    ctx.save();
+    ctx.translate(Math.round(x), Math.round(y));
+    ctx.rotate(angle);
+    ctx.scale(scale, scale);
+    shadow(0, 15, 28, 7);
+    ctx.fillStyle = "#8b989b";
+    ctx.fillRect(-27, -13, 54, 26);
+    ctx.strokeStyle = "rgba(28, 36, 38, 0.72)";
+    ctx.lineWidth = 2;
+    for (let x = -20; x <= 20; x += 10) {
+      ctx.beginPath();
+      ctx.moveTo(x, -11);
+      ctx.lineTo(x + 8, 11);
+      ctx.stroke();
+    }
+    ctx.fillStyle = "rgba(245, 238, 209, 0.28)";
+    ctx.fillRect(-18, -7, 24, 4);
     ctx.restore();
   }
 
@@ -3850,20 +4668,31 @@
 
   function drawBlocker(blocker) {
     const pulse = Math.sin(blocker.pulse) * 0.5 + 0.5;
+    const powered = blockerPowered(blocker);
     shadow(blocker.cx, blocker.y + blocker.h + 10, blocker.w * 0.55, 10);
     ctx.save();
-    ctx.fillStyle = blocker.awake ? "#3a2533" : "#2b3538";
+    ctx.fillStyle = powered ? "#20333d" : blocker.awake ? "#3a2533" : "#2b3538";
     ctx.fillRect(blocker.x, blocker.y, blocker.w, blocker.h);
-    ctx.fillStyle = blocker.awake ? palette.aiPink : "#64777a";
+    ctx.fillStyle = powered ? palette.aiBlue : blocker.awake ? palette.aiPink : "#64777a";
     ctx.fillRect(blocker.x + 12, blocker.y + 12, blocker.w - 24, 14);
     ctx.fillRect(blocker.x + 12, blocker.y + blocker.h - 26, blocker.w - 24, 14);
-    ctx.fillStyle = blocker.awake ? palette.aiBlue : "#92a5a7";
+    ctx.fillStyle = powered ? palette.aiPink : blocker.awake ? palette.aiBlue : "#92a5a7";
     ctx.globalAlpha = 0.45 + pulse * 0.35;
     ctx.fillRect(blocker.cx - 15, blocker.cy - 15, 30, 30);
     ctx.globalAlpha = 1;
-    ctx.strokeStyle = blocker.awake ? palette.aiPink : "rgba(245, 238, 209, 0.32)";
+    ctx.strokeStyle = powered ? palette.aiBlue : blocker.awake ? palette.aiPink : "rgba(245, 238, 209, 0.32)";
     ctx.lineWidth = 3;
     ctx.strokeRect(blocker.x + 5, blocker.y + 5, blocker.w - 10, blocker.h - 10);
+    if (powered) {
+      ctx.strokeStyle = `rgba(105, 215, 255, ${0.45 + pulse * 0.35})`;
+      ctx.lineWidth = 2;
+      for (let y = blocker.y + 22; y < blocker.y + blocker.h; y += 42) {
+        ctx.beginPath();
+        ctx.moveTo(blocker.x + 18, y);
+        ctx.lineTo(blocker.x + blocker.w - 18, y + Math.sin(game.time * 9 + y) * 8);
+        ctx.stroke();
+      }
+    }
     if (blocker.awake) {
       ctx.fillStyle = "rgba(241, 91, 91, 0.82)";
       ctx.fillRect(blocker.x + 8, blocker.y - 13, blocker.w - 16, 7);
@@ -3891,6 +4720,45 @@
         drawServer(server);
       }
     }
+  }
+
+  function drawServerDoor(server) {
+    const dr = doorRect(server);
+    ctx.save();
+    if (server.doorOpen || server.destroyed) {
+      ctx.fillStyle = "rgba(25, 35, 33, 0.72)";
+      ctx.fillRect(dr.x, dr.y, dr.w, dr.h);
+      ctx.fillStyle = "rgba(245, 238, 209, 0.12)";
+      ctx.fillRect(dr.x + 8, dr.y + 8, Math.max(4, dr.w - 16), Math.max(4, dr.h - 16));
+      ctx.restore();
+      return;
+    }
+    const pulse = Math.sin(game.time * 5 + server.doorPulse) * 0.5 + 0.5;
+    ctx.fillStyle = "#c8d0ca";
+    ctx.fillRect(dr.x, dr.y, dr.w, dr.h);
+    ctx.fillStyle = "#899597";
+    ctx.fillRect(dr.x + 8, dr.y + 8, dr.w - 16, dr.h - 16);
+    ctx.fillStyle = `rgba(105, 215, 255, ${0.22 + pulse * 0.28})`;
+    if (dr.w >= dr.h) {
+      ctx.fillRect(dr.x + 18, dr.y + dr.h / 2 - 4, dr.w - 36, 8);
+    } else {
+      ctx.fillRect(dr.x + dr.w / 2 - 4, dr.y + 18, 8, dr.h - 36);
+    }
+    ctx.strokeStyle = `rgba(245, 238, 209, ${0.34 + pulse * 0.28})`;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(dr.x + 4.5, dr.y + 4.5, dr.w - 9, dr.h - 9);
+    ctx.fillStyle = "rgba(241, 91, 91, 0.82)";
+    const hp = clamp(server.doorHp / server.doorMaxHp, 0, 1);
+    if (dr.w >= dr.h) {
+      ctx.fillRect(dr.x + 8, dr.y - 11, dr.w - 16, 6);
+      ctx.fillStyle = palette.leafLight;
+      ctx.fillRect(dr.x + 8, dr.y - 11, (dr.w - 16) * hp, 6);
+    } else {
+      ctx.fillRect(dr.x - 11, dr.y + 8, 6, dr.h - 16);
+      ctx.fillStyle = palette.leafLight;
+      ctx.fillRect(dr.x - 11, dr.y + 8 + (dr.h - 16) * (1 - hp), 6, (dr.h - 16) * hp);
+    }
+    ctx.restore();
   }
 
   function drawGridRect(x, y, w, h, fill, stroke = "rgba(4, 9, 6, 0.52)") {
@@ -4027,7 +4895,7 @@
     ctx.globalAlpha = 1;
   }
 
-  const SERVER_ACCENTS = ["#7ed957", "#ffb347", "#56d6c8", "#6a7bff", "#b06aff"];
+  const SERVER_ACCENTS = ["#7ed957", "#ffb347", "#56d6c8", "#6a7bff", "#b06aff", "#4fd287", "#91a0a8", "#c9f4ff", "#d08b5a", "#ffd66d"];
 
   function drawComputerCore(server, core, pulse, accent) {
     if (core.destroyed) {
@@ -4096,11 +4964,7 @@
     ctx.lineWidth = 1;
     for (const wall of roomWalls(server)) ctx.strokeRect(wall.x + 0.5, wall.y + 0.5, wall.w - 1, wall.h - 1);
 
-    const dr = doorRect(server);
-    ctx.fillStyle = "#6d5941";
-    ctx.fillRect(dr.x, dr.y, dr.w, dr.h);
-    ctx.fillStyle = "rgba(245, 238, 209, 0.14)";
-    ctx.fillRect(dr.x + 6, dr.y + 6, dr.w - 12, dr.h - 12);
+    drawServerDoor(server);
 
     // racks fill the room, skipping each computer core's footprint
     const coreRects = server.cores.map((c) => ({ x: c.x - TILE - 8, y: c.y - TILE - 8, w: TILE * 2 + 16, h: TILE * 2 + 16 }));
@@ -4231,6 +5095,34 @@
     }
   }
 
+  function drawSharks() {
+    for (const shark of sharks) drawShark(shark);
+  }
+
+  function drawShark(shark) {
+    const x = Math.round(shark.cx || shark.x);
+    const y = Math.round(shark.cy || shark.y);
+    const wake = 0.5 + Math.sin(game.time * 5 + shark.phase) * 0.5;
+    ctx.save();
+    ctx.globalAlpha = 0.72;
+    ctx.translate(x, y);
+    ctx.rotate(shark.drawDir || shark.dir);
+    ctx.fillStyle = "rgba(11, 28, 35, 0.55)";
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 42, 14, 0, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = "#8fa4aa";
+    ctx.beginPath();
+    ctx.moveTo(-4, -5);
+    ctx.lineTo(10, -34 - wake * 4);
+    ctx.lineTo(24, -4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#c8d4d5";
+    ctx.fillRect(22, -3, 12, 5);
+    ctx.restore();
+  }
+
   function drawDolphins() {
     for (const dolphin of dolphins) drawDolphin(dolphin);
   }
@@ -4247,45 +5139,62 @@
     const gold = dolphin.golden;
     const body = gold ? "#e8b84b" : "#6aaec4";
     const belly = gold ? "#f6e3a3" : "#bfe8ef";
-    const fin = gold ? "#c79530" : "#5f9eb4";
+    const fin = gold ? "#c79530" : "#4d8ea8";
     ctx.save();
+    ctx.fillStyle = gold ? "rgba(255, 214, 120, 0.28)" : "rgba(105, 215, 255, 0.28)";
+    ctx.fillRect(Math.round(baseX - 36), Math.round(baseY + 8), 72, 6);
+    ctx.fillRect(Math.round(baseX - 18), Math.round(baseY + 20), 36, 4);
     ctx.translate(x, y);
-    ctx.rotate(Math.sin(progress * Math.PI * 2) * 0.18);
-    ctx.scale(Math.cos(dolphin.dir) < 0 || Math.sin(dolphin.dir) < -0.5 ? -1 : 1, 1);
+    const pitch = -Math.cos(progress * Math.PI * 2) * 0.22;
+    ctx.rotate(dolphin.dir + pitch);
     if (gold) {
       ctx.shadowBlur = 16;
       ctx.shadowColor = "rgba(255, 214, 120, 0.8)";
     }
-    ctx.fillStyle = gold ? "rgba(255, 214, 120, 0.3)" : "rgba(105, 215, 255, 0.34)";
-    ctx.fillRect(Math.round(-34 - travel * 0.02), Math.round(jump * 50), 68, 6);
-    ctx.fillRect(-18, Math.round(jump * 50 + 10), 36, 4);
     ctx.fillStyle = body;
     ctx.beginPath();
-    ctx.ellipse(0, 0, 36, 14, -0.08, 0, TAU);
+    ctx.ellipse(0, 0, 38, 14, -0.06, 0, TAU);
     ctx.fill();
     ctx.fillStyle = belly;
     ctx.beginPath();
-    ctx.ellipse(8, 7, 23, 6, -0.05, 0, TAU);
+    ctx.ellipse(11, 7, 22, 5.5, -0.03, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.ellipse(35, -1, 18, 7, -0.03, 0, TAU);
     ctx.fill();
     ctx.fillStyle = fin;
     ctx.beginPath();
-    ctx.moveTo(-12, -10);
-    ctx.lineTo(3, -28);
-    ctx.lineTo(9, -8);
+    ctx.moveTo(-8, -9);
+    ctx.lineTo(5, -31);
+    ctx.lineTo(14, -8);
+    ctx.closePath();
     ctx.fill();
     ctx.beginPath();
-    ctx.moveTo(-33, 0);
-    ctx.lineTo(-52, -11);
-    ctx.lineTo(-47, 8);
+    ctx.moveTo(5, 8);
+    ctx.lineTo(18, 25);
+    ctx.lineTo(24, 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-34, -1);
+    ctx.lineTo(-58, -14);
+    ctx.lineTo(-48, 0);
+    ctx.lineTo(-58, 14);
+    ctx.closePath();
     ctx.fill();
     ctx.fillStyle = "#1b2b30";
-    ctx.fillRect(21, -6, 4, 4);
+    ctx.fillRect(42, -7, 4, 4);
     ctx.restore();
   }
 
   function drawFriendlyCritters() {
     for (const critter of friendlyCritters) {
-      drawAnimal(critter, true);
+      if (critter.type === "rabbit" || critter.type === "hedgehog" || critter.type === "fawn") {
+        drawCritter({ type: critter.type, x: critter.x, y: critter.y, r: critter.r, phase: critter.phase, dir: critter.dir || 0 });
+      } else {
+        drawAnimal(critter, true);
+      }
     }
   }
 
@@ -4477,7 +5386,8 @@
   function drawShot(shot) {
     ctx.save();
     if (shot.type === "plank") {
-      drawPlank(shot.x, shot.y, shot.angle + game.time * shot.spin, 1.05);
+      if (shot.metal) drawWirePlate(shot.x, shot.y, shot.angle + game.time * shot.spin, 1.05);
+      else drawPlank(shot.x, shot.y, shot.angle + game.time * shot.spin, 1.05);
     } else if (shot.type === "nut") {
       drawNut(shot.x, shot.y, 0.9, shot.angle + game.time * shot.spin);
     } else {
@@ -4537,9 +5447,10 @@
     }
 
     if (p.shield > 0) {
-      ctx.strokeStyle = "rgba(78, 208, 109, 0.72)";
-      ctx.lineWidth = 4;
-      ctx.strokeRect(-30, -28, 60, 56);
+      // a fainter shield aura than before
+      ctx.strokeStyle = `rgba(78, 208, 109, ${0.22 + Math.sin(game.time * 4) * 0.08})`;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-29, -27, 58, 54);
     }
 
     ctx.fillStyle = hurtBlink ? palette.cream : palette.beaver;
@@ -4582,7 +5493,10 @@
     }
 
     if (p.heldPlank) {
-      drawPlank(Math.cos(p.facing + 0.7) * 23, Math.sin(p.facing + 0.7) * 23, p.facing + 0.08, 0.85);
+      const hx = Math.cos(p.facing + 0.7) * 23;
+      const hy = Math.sin(p.facing + 0.7) * 23;
+      if (p.heldPlank.metal) drawWirePlate(hx, hy, p.facing + 0.08, 0.82);
+      else drawPlank(hx, hy, p.facing + 0.08, 0.85);
     }
 
     if (p.punchCooldown > 0.29) {
@@ -4622,11 +5536,6 @@
       drawHeart(88 + i * 22, 40, i + 1 <= Math.ceil(p.hp), p.hp - i);
     }
     ctx.fillStyle = palette.cream;
-    ctx.fillText("OGON", 310, 40);
-    ctx.fillText(Math.round(35 + p.tailLevel * 8) + " CM", 358, 40);
-    meter(310, 58, 104, 8, clamp(p.tailLevel / 12, 0, 1), palette.beaver);
-
-    ctx.fillStyle = palette.cream;
     ctx.fillText(game.area === "underground" ? "PODZIEMIA" : "LAS", 34, 68);
     ctx.fillText("SERWERY", 110, 68);
     for (let i = 0; i < game.servers.length; i += 1) {
@@ -4647,10 +5556,13 @@
     glassPanel(size.w - rightW - 18, 18, rightW, 72);
     drawMiniMap(size.w - rightW, 31, rightW - 34, 44);
 
-    if (p.tailLevel > 0) {
-      drawTailIcon(36, size.h - 42, 0.82);
-      meter(62, size.h - 55, 86, 9, clamp(p.tailLevel / 8, 0, 1), palette.beaver);
-    }
+    glassPanel(18, size.h - 76, 172, 56);
+    drawTailIcon(43, size.h - 46, 0.82);
+    ctx.font = "800 12px Inter, system-ui, sans-serif";
+    ctx.fillStyle = palette.cream;
+    ctx.fillText("OGON", 70, size.h - 54);
+    ctx.fillText(Math.round(35 + p.tailLevel * 8) + " CM", 70, size.h - 34);
+    meter(118, size.h - 58, 56, 8, clamp(p.tailLevel / 12, 0, 1), palette.beaver);
     if (p.heldPlank) {
       drawPlank(size.w - 180, size.h - 42, -0.1, 0.64);
     }
@@ -4667,11 +5579,7 @@
     }
     if (p.shield > 0) {
       drawSpinach(size.w - 58, size.h - 42, 0.72);
-      ctx.font = "800 11px Inter, system-ui, sans-serif";
-      ctx.fillStyle = "rgba(78, 208, 109, 0.9)";
-      ctx.textAlign = "right";
-      ctx.fillText("TARCZA", size.w - 78, size.h - 42);
-      ctx.textAlign = "left";
+      meter(size.w - 150, size.h - 47, 84, 8, p.shield / 60, palette.spinach);
     }
 
     // backpack indicator + open hint
@@ -4692,6 +5600,21 @@
       ctx.fillStyle = "#f5eed1";
       ctx.fillRect(x - 8, y - 6, 7, 12);
       ctx.fillRect(x + 1, y - 6, 7, 12);
+    } else if (it.id === "key") {
+      ctx.fillStyle = "#ffd66d";
+      ctx.fillRect(x - 12, y - 3, 24, 6);
+      ctx.fillRect(x + 8, y - 8, 8, 16);
+    } else if (it.id === "oldCoin") {
+      ctx.fillStyle = "#d6b25e";
+      ctx.beginPath();
+      ctx.arc(x, y, 12, 0, TAU);
+      ctx.fill();
+    } else if (it.id === "letter1" || it.id === "letter2" || it.id === "journal1" || it.id === "logbook" || it.id === "manual" || it.id === "lastNote") {
+      ctx.fillStyle = "#d4a15b";
+      ctx.fillRect(x - 12, y - 9, 24, 18);
+      ctx.fillStyle = "#f5eed1";
+      ctx.fillRect(x - 8, y - 5, 16, 3);
+      ctx.fillRect(x - 8, y + 1, 12, 3);
     } else if (it.id === "hat") {
       ctx.fillStyle = "#34463d";
       ctx.fillRect(x - 14, y + 4, 28, 6);
@@ -4754,7 +5677,7 @@
     ctx.fillText("PLECAK", panelX + 24, panelY + 40);
     ctx.font = "700 12px Inter, system-ui, sans-serif";
     ctx.fillStyle = "rgba(245, 238, 209, 0.6)";
-    ctx.fillText("[I] lub [ESC] zamyka   •   klik [X] wyrzuca przedmiot", panelX + 132, panelY + 40);
+    ctx.fillText("[I] lub [ESC] zamyka   •   przedmioty zostaja w plecaku", panelX + 132, panelY + 40);
 
     if (!game.items.length) {
       ctx.fillStyle = "rgba(245, 238, 209, 0.6)";
@@ -4781,18 +5704,13 @@
         ctx.fillText(line, panelX + 78, dy);
         dy += 15;
       }
-      const bx = panelX + panelW - 46;
-      const by = y + 12;
-      ctx.fillStyle = "rgba(241, 91, 91, 0.22)";
-      ctx.fillRect(bx, by, 28, 28);
-      ctx.strokeStyle = "rgba(241, 91, 91, 0.85)";
-      ctx.strokeRect(bx + 0.5, by + 0.5, 27, 27);
-      ctx.fillStyle = palette.cream;
-      ctx.font = "900 16px Inter, system-ui, sans-serif";
+      ctx.fillStyle = "rgba(126, 203, 119, 0.14)";
+      ctx.fillRect(panelX + panelW - 74, y + 14, 48, 24);
+      ctx.fillStyle = "rgba(245, 238, 209, 0.66)";
+      ctx.font = "900 11px Inter, system-ui, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("X", bx + 14, by + 20);
+      ctx.fillText("OK", panelX + panelW - 50, y + 30);
       ctx.textAlign = "left";
-      invButtons.push({ x: bx, y: by, w: 28, h: 28, index: i });
       y += rowH;
       if (y > panelY + panelH - rowH) break;
     }
@@ -5054,6 +5972,7 @@
     const panelY = Math.max(56, size.h / 2 - panelH / 2 + 20);
     const rows = [
       ["WASD", "ruch (lub strzalki)"],
+      ["SHIFT / B", "bieg (nie w wodzie)"],
       ["SPACJA", "rozmowa / gryzienie"],
       ["J", "podnies / poloz deske"],
       ["K", "rzut deska (atak na odleglosc)"],
@@ -5117,13 +6036,6 @@
     ctx.fillStyle = "rgba(245, 238, 209, 0.72)";
     ctx.fillText("wolny jak wiatr, cichy jak mech", cx, panelY - 62);
 
-    ctx.fillStyle = palette.cream;
-    ctx.font = "900 22px Inter, system-ui, sans-serif";
-    ctx.fillText("START", cx, panelY - 22);
-    ctx.font = "700 12px Inter, system-ui, sans-serif";
-    ctx.fillStyle = "rgba(245, 238, 209, 0.55)";
-    ctx.fillText("ENTER albo klik", cx, panelY - 4);
-
     ctx.fillStyle = "rgba(13, 18, 16, 0.72)";
     ctx.fillRect(panelX, panelY + 14, panelW, panelH);
     ctx.strokeStyle = "rgba(245, 238, 209, 0.18)";
@@ -5137,6 +6049,7 @@
 
     const rows = [
       ["WASD", "ruch (lub strzalki)"],
+      ["SHIFT / B", "bieg (nie w wodzie)"],
       ["SPACJA", "rozmowa / gryzienie"],
       ["J", "podnies / poloz deske"],
       ["K", "rzut deska (atak na odleglosc)"],
@@ -5149,6 +6062,14 @@
     ];
 
     drawControlRows(panelX, panelY + 66, panelW, rows);
+
+    ctx.textAlign = "center";
+    ctx.font = "900 26px Inter, system-ui, sans-serif";
+    ctx.fillStyle = palette.cream;
+    ctx.fillText("START", cx, panelY + panelH + 56);
+    ctx.font = "700 12px Inter, system-ui, sans-serif";
+    ctx.fillStyle = "rgba(245, 238, 209, 0.62)";
+    ctx.fillText("SPACJA / ENTER", cx, panelY + panelH + 76);
     ctx.restore();
   }
 
@@ -5238,15 +6159,19 @@
     }
   }
 
+  // Freed wildlife that returns when a server room falls — these stay for good and roam the meadow.
   function spawnFriendlyRing(x, y) {
+    const kinds = ["cat", "dog", "squirrel", "rabbit"];
     for (let i = 0; i < 4; i += 1) {
+      const open = findOpenSpot(x + Math.cos(i * TAU / 4) * 90, y + Math.sin(i * TAU / 4) * 90, 22);
       friendlyCritters.push({
-        type: i % 2 ? "cat" : "dog",
-        x: x + Math.cos(i * TAU / 4) * 70,
-        y: y + Math.sin(i * TAU / 4) * 70,
-        r: i % 2 ? 20 : 19,
+        type: kinds[i],
+        x: open.x,
+        y: open.y,
+        r: i % 2 ? 18 : 16,
         phase: rand() * TAU,
-        life: 14
+        dir: rand() * TAU,
+        permanent: true
       });
     }
   }
@@ -5369,12 +6294,15 @@
       musicGain.gain.setTargetAtTime(0.0001, context.currentTime, 0.4);
       return;
     }
-    // Background music stays constant everywhere: one calm ambient bed, no threat/area switching.
-    musicGain.gain.setTargetAtTime(0.68, context.currentTime, 0.8);
+    const bossDistance = game && game.player ? Math.hypot(game.player.x - BOSS_X, game.player.y - BOSS_Y) : 99999;
+    const dataDistance = game && game.player ? Math.hypot(game.player.x - (DATA_CENTER.x + DATA_CENTER.w / 2), game.player.y - (DATA_CENTER.y + DATA_CENTER.h / 2)) : 99999;
+    musicGain.gain.setTargetAtTime(bossDistance < 760 ? 0.76 : dataDistance < 1700 ? 0.72 : 0.68, context.currentTime, 0.8);
     if (context.currentTime < audio.nextNote) return;
 
-    const scale = [147, 196, 220, 247, 294, 330, 392, 440];
-    const phrase = [0, 2, 3, 5, 3, 2, 0, 4, 3, 1, 2, 5];
+    const nearBoss = game && game.player && Math.hypot(game.player.x - BOSS_X, game.player.y - BOSS_Y) < 760;
+    const nearData = game && game.player && Math.hypot(game.player.x - (DATA_CENTER.x + DATA_CENTER.w / 2), game.player.y - (DATA_CENTER.y + DATA_CENTER.h / 2)) < 1700;
+    const scale = nearBoss ? [110, 147, 165, 196, 220, 233, 294, 330] : nearData ? [123, 165, 196, 220, 247, 294, 330, 392] : [147, 196, 220, 247, 294, 330, 392, 440];
+    const phrase = nearBoss ? [0, 1, 3, 2, 5, 4, 2, 1, 6, 5, 3, 1] : nearData ? [0, 2, 4, 3, 5, 3, 1, 4, 2, 5, 3, 2] : [0, 2, 3, 5, 3, 2, 0, 4, 3, 1, 2, 5];
     const step = phrase[audio.index % phrase.length];
     const octave = audio.index % 12 === 0 ? 0.5 : audio.index % 5 === 0 ? 1.5 : 1;
     const note = scale[step % scale.length] * octave;
@@ -5435,7 +6363,7 @@
 
   window.addEventListener("resize", resize);
   window.addEventListener("keydown", (event) => {
-    if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter", "KeyE", "Escape", "KeyP", "KeyR", "KeyJ", "KeyK", "KeyL", "KeyM", "KeyI"].includes(event.code)) {
+    if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter", "KeyE", "Escape", "KeyP", "KeyR", "KeyJ", "KeyK", "KeyL", "KeyM", "KeyI", "KeyB", "ShiftLeft", "ShiftRight"].includes(event.code)) {
       event.preventDefault();
     }
     initAudio();
@@ -5447,8 +6375,8 @@
       if (!event.repeat) toggleInventory();
       return;
     }
-    if (event.code === "Escape" && game.inventoryOpen) {
-      if (!event.repeat) game.inventoryOpen = false;
+    if (game.inventoryOpen) {
+      if (event.code === "Escape") { if (!event.repeat) game.inventoryOpen = false; return; }
       return;
     }
     if ((event.code === "Escape" || event.code === "KeyP") && (game.state === "play" || game.state === "paused")) {
@@ -5497,16 +6425,7 @@
     const rect = canvas.getBoundingClientRect();
     const sx = (event.clientX - rect.left) * (screenSize().w / rect.width);
     const sy = (event.clientY - rect.top) * (screenSize().h / rect.height);
-    // inventory open: clicking an X discards that item
-    if (game.inventoryOpen) {
-      for (const b of invButtons) {
-        if (sx >= b.x && sx <= b.x + b.w && sy >= b.y && sy <= b.y + b.h) {
-          discardItem(b.index);
-          break;
-        }
-      }
-      return;
-    }
+    if (game.inventoryOpen) return;
     if (game.state !== "play") return;
     const p = game.player;
     const worldX = camera.x + sx;
