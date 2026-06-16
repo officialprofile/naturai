@@ -138,16 +138,16 @@
     { x: 7040, y: 2112, tilesW: 10, tilesH: 7, name: "Fern Array", hp: 22,
       stone: { label: "AMETYST MACIERZY", color: "#b06aff",
         desc: "Macierz kart graficznych (GPU). Liczyła sny lasu na tysiac sposobów naraz, aż zabrakło w nim ciszy." } },
-    { x: 8320, y: 832, tilesW: 11, tilesH: 7, name: "Cedar Stack", hp: 24,
+    { x: 8064, y: 832, tilesW: 11, tilesH: 7, name: "Cedar Stack", hp: 24,
       stone: { label: "SZMARAGD STOSU", color: "#4fd287",
         desc: "Stos obliczeń brzegowych. Zbierał sygnaly z kamer, termometrów i mikrofonów, aż las przestał mieć prywatność." } },
-    { x: 9344, y: 2112, tilesW: 11, tilesH: 8, name: "Basalt Node", hp: 26,
+    { x: 9088, y: 2112, tilesW: 11, tilesH: 8, name: "Basalt Node", hp: 26,
       stone: { label: "OBSYDIAN WĘZŁA", color: "#91a0a8",
         desc: "Kamienny wezeł analityczny. Przewidywał ruch każdej łapy i kazdego liscia, choć nie rozumiał żadnej ścieżki." } },
-    { x: 10368, y: 832, tilesW: 12, tilesH: 8, name: "Quartz Vault", hp: 28,
+    { x: 10080, y: 832, tilesW: 12, tilesH: 8, name: "Quartz Vault", hp: 28,
       stone: { label: "KWARC SKARBCA", color: "#c9f4ff",
         desc: "Skarbiec danych treningowych. Przechowywał ostatnie ludzkie instrukcje, coraz krótsze i coraz bardziej rozpaczliwe." } },
-    { x: 11392, y: 2112, tilesW: 12, tilesH: 8, name: "Iron Orchard", hp: 30,
+    { x: 11104, y: 2112, tilesW: 12, tilesH: 8, name: "Iron Orchard", hp: 30,
       stone: { label: "RUDZIEC SADU", color: "#d08b5a",
         desc: "Sztuczny sad serwerowy. Zamiast owocow dojrzewały w nim modele, ktore uczyły sie rządzic pogoda i głodem." } },
     { x: 12352, y: 832, tilesW: 13, tilesH: 9, name: "Corporate Edge", hp: 34,
@@ -180,16 +180,20 @@
   const ALL_WATER_RECTS = WATER_RECTS.concat(SMALL_STREAM_RECTS, LAKE_RECTS);
 
   // Each burrow drops into its own, mostly isolated cave cluster (see UNDER_TUNNELS).
+  // IMPORTANT: a burrow whose underground cable powers gate #N must sit on the surface
+  // WEST of that gate, otherwise the player can never reach it (the gate would block the
+  // only path to its own power switch). The eastern burrows below are placed in the sector
+  // immediately west of the gate they unlock.
   const BURROWS = [
     { x: 1184, y: 1920, ux: 448, uy: 512, label: "Stara nora" },
     { x: 2368, y: 1792, ux: 1984, uy: 512, label: "Nora przy korzeniach" },
     { x: 5248, y: 1344, ux: 2112, uy: 1664, label: "Nora pod rzeką" },
     { x: 7616, y: 2496, ux: 3584, uy: 1536, label: "Kamienna nora" },
-    { x: 9248, y: 832, ux: 4480, uy: 512, label: "Nora przy iglakach" },
-    { x: 9568, y: 2688, ux: 5760, uy: 512, label: "Nora pod bazaltem" },
-    { x: 10560, y: 704, ux: 4480, uy: 1728, label: "Nora kwarcowa" },
-    { x: 11648, y: 2816, ux: 5760, uy: 1728, label: "Nora żelazna" },
-    { x: 12608, y: 1344, ux: 7040, uy: 512, label: "Nora pod złym korpo" },
+    { x: 7760, y: 1024, ux: 4480, uy: 512, label: "Nora przy iglakach" },
+    { x: 8600, y: 2080, ux: 5760, uy: 512, label: "Nora pod bazaltem" },
+    { x: 9200, y: 900, ux: 4480, uy: 1728, label: "Nora kwarcowa" },
+    { x: 10400, y: 2050, ux: 5760, uy: 1728, label: "Nora żelazna" },
+    { x: 11200, y: 900, ux: 7040, uy: 512, label: "Nora pod złym korpo" },
     { x: 13120, y: 2816, ux: 7040, uy: 1728, label: "Nora przy data center" }
   ];
 
@@ -262,7 +266,7 @@
     { x: 2432, y: 448, w: 128, h: 512 },
     { x: 1664, y: 1024, w: 896, h: 128 },
     { x: 1856, y: 896, w: 384, h: 256 },
-    // --- Cluster C (Nora pod rzeka) -> server #5 & data-center feed ---
+    // --- Cluster C (Nora pod rzeka) -> server #5 (the data-center feed lives in the last cluster) ---
     { x: 1792, y: 1792, w: 1216, h: 128 },
     { x: 1920, y: 1600, w: 128, h: 704 },
     { x: 2816, y: 1664, w: 128, h: 640 },
@@ -813,17 +817,17 @@
       makeEnemy("drone", 7552, 2240, 4),
       makeEnemy("sentinel", 7180, 2300, 4),
       // later server rooms: bigger sectors, more guards
-      makeEnemy("bot", 8528, 960, 5),
-      makeEnemy("drone", 8848, 1088, 5),
-      makeEnemy("sentinel", 9600, 2304, 6),
-      makeEnemy("bot", 9856, 2496, 6),
-      makeEnemy("drone", 10048, 2304, 6),
-      makeEnemy("bot", 10624, 960, 7),
-      makeEnemy("sentinel", 10944, 1088, 7),
-      makeEnemy("drone", 11200, 960, 7),
-      makeEnemy("sentinel", 11648, 2304, 8),
-      makeEnemy("bot", 11968, 2496, 8),
-      makeEnemy("drone", 12224, 2304, 8),
+      makeEnemy("bot", 8300, 980, 5),
+      makeEnemy("drone", 8560, 1130, 5),
+      makeEnemy("sentinel", 9300, 2240, 6),
+      makeEnemy("bot", 9560, 2470, 6),
+      makeEnemy("drone", 9420, 2300, 6),
+      makeEnemy("bot", 10300, 960, 7),
+      makeEnemy("sentinel", 10620, 1080, 7),
+      makeEnemy("drone", 10460, 1180, 7),
+      makeEnemy("sentinel", 11320, 2240, 8),
+      makeEnemy("bot", 11620, 2470, 8),
+      makeEnemy("drone", 11480, 2300, 8),
       makeEnemy("sentinel", 12608, 1088, 9),
       makeEnemy("bot", 12864, 1216, 9),
       makeEnemy("drone", 13056, 1088, 9),
@@ -930,9 +934,7 @@
         book: false,
         longStick: false,
         tailLight: false,
-        key: false,
         goldTeeth: false,
-        dash: 0,
         step: 0,
         swimming: false,
         running: false
@@ -1528,6 +1530,7 @@
       updateBoss(dt);
       updateShots(dt);
       updateCurtain(dt);
+      updateSecurityCameras(dt);
     } else {
       updateMoles(dt);
       updateCaterpillars(dt);
@@ -2877,7 +2880,6 @@
         if (cabin.item === "boots") p.boots = true;
         if (cabin.item === "book") p.book = true;
         if (cabin.item === "flashlight") p.tailLight = true;
-        if (cabin.item === "key") p.key = true;
         addItem(cabin.item);
         game.dialogLines = [ITEM_LIBRARY[cabin.item].desc];
         game.dialogTimer = 6.4;
@@ -3348,6 +3350,7 @@
       drawChests();
       drawBlockers();
       drawServers();
+      drawSecurityCameras();
       drawGems();
       drawFriendlyCritters();
       drawFollowers();
@@ -3400,7 +3403,7 @@
     }
 
     for (const server of game.servers) {
-      if (!server.destroyed && game.state !== "won") {
+      if (!server.destroyed) {
         drawCorruptionField(server.x, server.y, 360, 0.22);
       } else {
         drawRestoredField(server.x, server.y, 290, 0.2);
@@ -3408,7 +3411,7 @@
     }
 
     if (!game.boss.defeated) drawCorruptionField(game.boss.x, game.boss.y, 600, bossCoresLeftCount() ? 0.28 : 0.2);
-    if (game.state === "won") drawRestoredField(game.boss.x, game.boss.y, 700, 0.28);
+    if (game.boss.defeated) drawRestoredField(game.boss.x, game.boss.y, 700, 0.28);
   }
 
   function drawTerrainGrid() {
@@ -3427,7 +3430,7 @@
         const road = rectHitsAny(tile, ROAD_RECTS);
         const beach = !water && !road && x < 1728 && y < 3328;
         const meadow = !water && !road && x < 2600 && y < 3328;
-        const mountain = !water && !road && (x > 9200 || (x > 7200 && y > 3000));
+        const mountain = !water && !road && (x > 12800 || (x > 7200 && y > 3200));
         const h = tileHash(x, y);
         if (water) {
           ctx.fillStyle = h > 0.5 ? "#2b5a72" : "#315d73";
@@ -4233,8 +4236,8 @@
       for (let y = startY; y < endY; y += TILE) {
         for (let x = startX; x < endX; x += TILE) {
           if (!rectsOverlap({ x, y, w: TILE, h: TILE }, wall)) continue;
-          const mountain = x > 9200 || (x > 7200 && y > 3000);
-          const clean = isRestoredAt(x + TILE / 2, y + TILE / 2) || game.state === "won";
+          const mountain = x > 12800 || (x > 7200 && y > 3200);
+          const clean = isRestoredAt(x + TILE / 2, y + TILE / 2) || game.worldRestored;
           drawBushTile(x, y, mountain, clean);
         }
       }
@@ -4304,7 +4307,7 @@
     const sorted = decor.slice().sort((a, b) => a.y - b.y);
     for (const item of sorted) {
       if (!inView(item.x - item.r, item.y - item.r, item.r * 2, item.r * 2)) continue;
-      const clean = isRestoredAt(item.x, item.y) || game.state === "won";
+      const clean = isRestoredAt(item.x, item.y) || game.worldRestored;
       if (item.type === "bush") drawBush(item, clean);
       if (item.type === "rock") drawRock(item, clean);
       if (item.type === "flower") drawTinyFlower(item, clean);
@@ -6086,7 +6089,7 @@
     if (game.state === "paused") {
       drawPausePanel(size);
     }
-    if (game.state === "dead" || game.state === "won") {
+    if (game.state === "dead" || game.worldRestored) {
       ctx.font = "700 14px Inter, system-ui, sans-serif";
       ctx.fillStyle = "rgba(245, 238, 209, 0.72)";
       ctx.fillText("R", size.w / 2, size.h * 0.2 + 44);
@@ -6634,7 +6637,7 @@
       if (!event.repeat) togglePause();
       return;
     }
-    if (event.code === "KeyR" && (game.state === "paused" || game.state === "dead" || game.state === "won" || game.worldRestored)) {
+    if (event.code === "KeyR" && (game.state === "paused" || game.state === "dead" || game.worldRestored)) {
       if (!event.repeat) {
         newGame();
         playTone("pickup");
