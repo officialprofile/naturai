@@ -28,6 +28,10 @@
 
   const WATER_RECTS = [
     { x: 0, y: 3200, w: 4032, h: 320 },
+    { x: 128, y: 960, w: 576, h: 896 },
+    { x: 128, y: 2432, w: 576, h: 768 },
+    { x: 1024, y: 1088, w: 1664, h: 960 },
+    { x: 1024, y: 2304, w: 1664, h: 896 },
     { x: 704, y: 1088, w: 320, h: 1856 },
     { x: 5376, y: 3200, w: 9856, h: 320 },
     { x: 1024, y: 0, w: 320, h: 3200 },
@@ -215,10 +219,21 @@
     { x: 1136, y: 2464, w: 192, h: 96 }
   ];
 
+  const WATER_PLANTS = [
+    { type: "lily", x: 384, y: 1152 }, { type: "lily", x: 512, y: 1408 },
+    { type: "lily", x: 1600, y: 1344 }, { type: "lily", x: 2368, y: 2624 },
+    { type: "lily", x: 6272, y: 3008 }, { type: "lily", x: 8640, y: 832 },
+    { type: "reed", x: 192, y: 1728, w: 192, h: 128 },
+    { type: "reed", x: 448, y: 2688, w: 192, h: 192 },
+    { type: "reed", x: 1472, y: 1088, w: 256, h: 128 },
+    { type: "reed", x: 6144, y: 2944, w: 320, h: 128 },
+    { type: "reed", x: 8256, y: 768, w: 256, h: 128 }
+  ];
+
   // Hidden treasure pockets: 3 sides are dense forest wall, only ONE side is a chewable hedge.
   const SECRET_HEDGE_RECTS = [
     // Pocket A (west) -> elixir, entry by chewing the east hedge
-    { x: 832, y: 1984, w: 64, h: 384, name: "Sekretny zarosl", hp: 5 },
+    { x: 640, y: 1984, w: 64, h: 384, name: "Sekretny zarosl", hp: 5 },
     // Pocket B (north) -> super long stick, entry from the south hedge
     { x: 2048, y: 576, w: 384, h: 64, name: "Sekretny zarosl", hp: 5 },
     // Pocket C (south) -> heart of the forest, entry from the north hedge
@@ -229,7 +244,7 @@
 
   // The 3 closed sides of each secret pocket read as ordinary impassable forest.
   const SECRET_WALL_RECTS = [
-    { x: 512, y: 1984, w: 64, h: 384 }, { x: 512, y: 1984, w: 384, h: 64 }, { x: 512, y: 2304, w: 384, h: 64 },
+    { x: 256, y: 1984, w: 64, h: 384 }, { x: 256, y: 1984, w: 448, h: 64 }, { x: 256, y: 2304, w: 448, h: 64 },
     { x: 2048, y: 256, w: 64, h: 384 }, { x: 2368, y: 256, w: 64, h: 384 },
     { x: 2944, y: 3456, w: 64, h: 384 }, { x: 3264, y: 3456, w: 64, h: 384 }, { x: 2944, y: 3776, w: 384, h: 64 },
     { x: 1728, y: 448, w: 64, h: 320 }, { x: 1792, y: 704, w: 192, h: 64 }, { x: 1984, y: 448, w: 64, h: 320 }
@@ -312,9 +327,11 @@
       desc: "Zardzewialy procesor w obudowie. Krety mowia, ze to z niego AI nauczylo sie liczyc szybciej niz bobr scina drzewo." },
     { area: "underground", x: 2480, y: 2160, label: "KOSC PAMIECI", color: "#9fe7ff",
       desc: "Modul RAM oblepiony mchem. Pamietal jeszcze, jak las wygladal, zanim policzono kazde drzewo." },
+    { area: "surface", x: 576, y: 928, label: "BUTELKA Z WIADOMOSCIA", color: "#9cc7c0",
+      desc: "W srodku jest kartka: 'Rok niepewny, miejsce: plaza po cywilizacji. Jesli to czytasz, to znaczy, ze poczta morska dziala lepiej niz nasz dzial IT.'." },
     { area: "surface", underwater: true, x: 1136, y: 2464, label: "DREWNIANA NOGA PIRATA", color: "#b77b43",
       desc: "Kawalek drewnianej nogi z wraku. Jedyna rzecz, ktora zostala po ludziach, ktorzy probowali uciekac morzem." },
-    { area: "surface", underwater: true, x: 1216, y: 1536, label: "ZLOTY ZAB BOBRA", color: "#ffd66d", effect: "goldTeeth",
+    { area: "surface", underwater: true, x: 12480, y: 928, label: "ZLOTY ZAB BOBRA", color: "#ffd66d", effect: "goldTeeth",
       desc: "Stary zloty zab, ciezki i ostry. Po zalozeniu bobr gryzie mocniej, jakby metal pamietal wszystkie utracone tamy." },
     { area: "surface", underwater: true, x: 6176, y: 3360, label: "KOSC OSTATNIEGO CZLOWIEKA", color: "#e8dcc4",
       desc: "Gladki fragment kosci. Nie ma w nim grozy, raczej cisza po gatunku, ktory najpierw zbudowal maszyny, a potem juz tylko prosil je o litosc." },
@@ -863,9 +880,9 @@
       critters: makeCritters(),
       pickups: [
         { type: "flower", species: "daisy", x: 832, y: 896, r: 17, taken: false, bob: 0 },
-        { type: "flower", species: "poppy", x: 896, y: 1536, r: 17, taken: false, bob: 0.7 },
-        { type: "flower", species: "cornflower", x: 1856, y: 2880, r: 17, taken: false, bob: 1.2 },
-        { type: "flower", species: "violet", x: 2496, y: 2592, r: 17, taken: false, bob: 1.7 },
+        { type: "flower", species: "poppy", x: 576, y: 832, r: 17, taken: false, bob: 0.7 },
+        { type: "flower", species: "cornflower", x: 3264, y: 2752, r: 17, taken: false, bob: 1.2 },
+        { type: "flower", species: "violet", x: 3456, y: 2816, r: 17, taken: false, bob: 1.7 },
         { type: "flower", species: "clover", x: 3264, y: 1408, r: 17, taken: false, bob: 2.3 },
         { type: "flower", species: "dandelion", x: 3968, y: 1856, r: 17, taken: false, bob: 2.9 },
         { type: "flower", species: "bluebell", x: 4736, y: 1984, r: 17, taken: false, bob: 3.7 },
@@ -874,16 +891,16 @@
         { type: "flower", species: "thistle", x: 7040, y: 2624, r: 17, taken: false, bob: 5.1 },
         { type: "flower", species: "chamomile", x: 7680, y: 2624, r: 17, taken: false, bob: 5.6 },
         { type: "spinach", x: 704, y: 960, r: 16, taken: false, respawn: 0, bob: 0.4 },
-        { type: "spinach", x: 1664, y: 1472, r: 16, taken: false, respawn: 0, bob: 2.4 },
+        { type: "spinach", x: 320, y: 832, r: 16, taken: false, respawn: 0, bob: 2.4 },
         { type: "spinach", x: 3456, y: 1792, r: 16, taken: false, respawn: 0, bob: 1 },
         { type: "spinach", x: 6016, y: 768, r: 16, taken: false, respawn: 0, bob: 3 },
         { type: "spinach", x: 7616, y: 2624, r: 16, taken: false, respawn: 0, bob: 5 },
         { type: "nut", x: 960, y: 768, r: 12, taken: false, bob: 0.2 },
-        { type: "nut", x: 2368, y: 2624, r: 12, taken: false, bob: 1.6 },
+        { type: "nut", x: 3200, y: 2816, r: 12, taken: false, bob: 1.6 },
         { type: "nut", x: 4608, y: 1792, r: 12, taken: false, bob: 3.2 },
         { type: "nut", x: 6208, y: 2496, r: 12, taken: false, bob: 4.7 },
         { type: "nut", x: 7616, y: 2624, r: 12, taken: false, bob: 5.4 },
-        { type: "elixir", x: 704, y: 2176, r: 15, taken: false, bob: 6.1 },
+        { type: "elixir", x: 448, y: 2176, r: 15, taken: false, bob: 6.1 },
         { type: "stick", x: 2240, y: 416, r: 15, taken: false, bob: 0 },
         { type: "heart", x: 3136, y: 3648, r: 15, taken: false, bob: 0 }
       ],
@@ -1368,7 +1385,7 @@
     for (const [x, y] of islandTrees) {
       items.push({ type: "bush", x, y, r: 30, chewable: false, chewed: false, species: null, hue: rand(), phase: rand() * TAU });
     }
-    const lagoonIslandTrees = [[8680, 3548], [8560, 3548], [8928, 3988], [9024, 4112], [10240, 3904], [11136, 3904]];
+    const lagoonIslandTrees = [[8680, 3548], [8560, 3548], [8928, 3988], [9024, 4112], [10240, 3904], [10944, 3904]];
     for (const [x, y] of lagoonIslandTrees) {
       items.push({ type: "bush", x, y, r: 28, chewable: false, chewed: false, species: null, hue: rand(), phase: rand() * TAU });
     }
@@ -2258,19 +2275,19 @@
         if (pickup.type === "flower") {
           p.tailLevel += 0.25;
           const flower = flowerInfo(pickup.species);
-          game.message = flower.label + ": OGON +";
+          game.message = flower.label;
           game.messageTimer = 2.4;
           burst(pickup.x, pickup.y, 30, flower.petals);
           playTone("pickup");
         } else if (pickup.type === "nut") {
           p.nuts = Math.min(6, p.nuts + 1);
-          game.message = "ORZESZEK +1 (KARMA DLA ZWIERZAT)";
+          game.message = "ORZESZEK";
           game.messageTimer = 1.6;
           burst(pickup.x, pickup.y, 18, "#b77b43");
           playTone("pickup");
         } else if (pickup.type === "elixir") {
           p.tailLevel = Math.max(2, p.tailLevel * 2);
-          game.message = "ELIKSIR OGONA x2";
+          game.message = "ELIKSIR OGONA";
           game.messageTimer = 2.8;
           burst(pickup.x, pickup.y, 48, palette.aiViolet);
           playTone("restore");
@@ -2284,14 +2301,14 @@
         } else if (pickup.type === "heart") {
           p.maxHp += 2;
           p.hp = p.maxHp;
-          game.message = "SERCE LASU: ZYCIE +2";
+          game.message = "SERCE LASU";
           game.messageTimer = 2.8;
           burst(pickup.x, pickup.y, 44, palette.red);
           playTone("restore");
         } else {
           pickup.respawn = 24;
           p.shield = 60;
-          game.message = "TARCZA ZE SZPINAKU";
+          game.message = "SZPINAK";
           game.messageTimer = 1.9;
           burst(pickup.x, pickup.y, 28, palette.spinach);
           playTone("shield");
@@ -2306,7 +2323,7 @@
       if (circleHit(p, gem, 10)) {
         gem.taken = true;
         addItem("gem", gem);
-        game.message = gem.label + " ZEBRANY";
+        game.message = gem.label;
         game.messageTimer = 2.4;
         burst(gem.x, gem.y, 30, gem.color);
         playTone("pickup");
@@ -2532,7 +2549,7 @@
     if (!best) return false;
     best.eaten = true;
     p.hp = Math.min(p.maxHp, p.hp + 0.5);
-    game.message = "GASIENICA +1/2 ZYCIA";
+    game.message = "GASIENICA";
     game.messageTimer = 1.6;
     burst(best.x, best.y, 18, "#b7d86a");
     playTone("pickup");
@@ -2694,7 +2711,7 @@
         spot.taken = true;
         applyIntelEffect(spot);
         addItem("intel", spot);
-        game.message = spot.label + " ZEBRANY";
+        game.message = spot.label;
         game.messageTimer = 2.4;
         burst(spot.x, spot.y, 26, spot.color || palette.aiBlue);
         playTone("pickup");
@@ -2706,12 +2723,8 @@
     const p = game.player;
     if (spot.effect === "goldTeeth") {
       p.goldTeeth = true;
-      game.dialogLines = ["Zlote zeby mocniej lapia rdzenie i pancerze. Gryzienie zadaje teraz wieksze obrazenia."];
-      game.dialogTimer = 4.8;
     } else if (spot.effect === "tailOintment") {
       p.tailLevel = Math.max(p.tailLevel + 1.4, p.tailLevel * 1.45);
-      game.dialogLines = ["Masc rozgrzewa ogon i sprawia, ze wydluza sie bardziej niz po zwyklych kwiatach."];
-      game.dialogTimer = 4.8;
     }
   }
 
@@ -2788,6 +2801,7 @@
       game.message = cabin.title;
       game.messageTimer = 4.8;
       if (cabin.item && ITEM_LIBRARY[cabin.item]) {
+        game.message = ITEM_LIBRARY[cabin.item].label;
         if (cabin.item === "hat") p.hat = true;
         if (cabin.item === "boots") p.boots = true;
         if (cabin.item === "book") p.book = true;
@@ -2824,7 +2838,7 @@
       }
       chest.opened = true;
       addItem(chest.item);
-      game.message = chest.title + " OTWARTA";
+      game.message = ITEM_LIBRARY[chest.item] ? ITEM_LIBRARY[chest.item].label : chest.title;
       game.messageTimer = 2.4;
       game.dialogLines = [ITEM_LIBRARY[chest.item].desc];
       game.dialogTimer = 5.4;
@@ -3244,6 +3258,7 @@
       drawWorld();
       drawDataCenter();
       drawForestWalls();
+      drawWaterPlants();
       drawDecor();
       drawMiniDams();
       drawVictoryFlowers();
@@ -3812,20 +3827,52 @@
     ctx.restore();
   }
 
+  function drawWaterPlants() {
+    for (const plant of WATER_PLANTS) {
+      if (plant.type === "lily") {
+        if (!inView(plant.x - 32, plant.y - 32, 64, 64)) continue;
+        ctx.save();
+        ctx.globalAlpha = 0.82;
+        ctx.fillStyle = "#2f7f4a";
+        ctx.fillRect(plant.x - 18, plant.y - 10, 36, 20);
+        ctx.fillRect(plant.x - 10, plant.y - 18, 20, 36);
+        ctx.fillStyle = "#f2e872";
+        ctx.fillRect(plant.x - 4, plant.y - 4, 8, 8);
+        ctx.restore();
+      } else {
+        if (!inView(plant.x, plant.y, plant.w, plant.h)) continue;
+        ctx.save();
+        ctx.fillStyle = "rgba(32, 96, 55, 0.78)";
+        for (let x = plant.x + 8; x < plant.x + plant.w - 8; x += 16) {
+          for (let y = plant.y + 8; y < plant.y + plant.h - 8; y += 24) {
+            ctx.fillRect(x, y - 18, 7, 28);
+            ctx.fillStyle = "rgba(91, 174, 83, 0.72)";
+            ctx.fillRect(x + 7, y - 10, 8, 5);
+            ctx.fillStyle = "rgba(32, 96, 55, 0.78)";
+          }
+        }
+        ctx.restore();
+      }
+    }
+  }
+
   function drawShipwrecks() {
     for (const wreck of SHIPWRECKS) {
       ctx.save();
-      ctx.globalAlpha = 0.78;
-      shadow(wreck.x + wreck.w / 2, wreck.y + wreck.h / 2 + 24, wreck.w * 0.44, 12);
+      ctx.globalAlpha = 0.7;
+      shadow(wreck.x + wreck.w / 2, wreck.y + wreck.h / 2 + 28, wreck.w * 0.42, 11);
       ctx.translate(wreck.x + wreck.w / 2, wreck.y + wreck.h / 2);
-      ctx.rotate(-0.18);
-      ctx.fillStyle = "#6d4b31";
-      ctx.fillRect(-wreck.w / 2, -18, wreck.w, 36);
-      ctx.fillStyle = "#3e2c20";
-      ctx.fillRect(-wreck.w / 2 + 18, -28, 18, 56);
-      ctx.fillRect(12, -30, 15, 60);
-      ctx.fillStyle = "rgba(105, 215, 255, 0.22)";
-      ctx.fillRect(-wreck.w / 2 + 8, 20, wreck.w - 16, 7);
+      ctx.fillStyle = "#4d3526";
+      ctx.fillRect(-96, -24, 192, 48);
+      ctx.fillStyle = "#2f2119";
+      ctx.fillRect(-82, -14, 54, 28);
+      ctx.fillRect(28, -14, 54, 28);
+      ctx.fillStyle = "#7c5738";
+      for (let x = -88; x <= 72; x += 32) ctx.fillRect(x, -20, 18, 40);
+      ctx.fillStyle = "rgba(105, 215, 255, 0.28)";
+      ctx.fillRect(-96, 24, 192, 8);
+      ctx.fillRect(-64, -32, 24, 8);
+      ctx.fillRect(48, 28, 32, 8);
       ctx.restore();
     }
   }
@@ -4044,9 +4091,16 @@
       const y = Math.round(spot.y + Math.sin(game.time * 2 + spot.pulse) * (spot.underwater ? 1 : 2));
       const glow = 0.5 + Math.sin(game.time * 4 + spot.pulse) * 0.5;
       ctx.save();
-      if (spot.underwater) ctx.globalAlpha = game.player.swimming ? 0.58 : 0.28;
+      if (spot.underwater) ctx.globalAlpha = 0.1;
       const c = spot.color || "#9fe7ff";
-      if (spot.label.includes("ZAB")) {
+      if (spot.label.includes("BUTELKA")) {
+        ctx.fillStyle = "#6fa99f";
+        ctx.fillRect(x - 7, y - 16, 14, 28);
+        ctx.fillStyle = "#b8d6cf";
+        ctx.fillRect(x - 4, y - 22, 8, 7);
+        ctx.fillStyle = "#f1dfb8";
+        ctx.fillRect(x - 5, y - 3, 10, 9);
+      } else if (spot.label.includes("ZAB")) {
         ctx.fillStyle = c;
         ctx.fillRect(x - 11, y - 12, 22, 24);
         ctx.fillStyle = "rgba(245, 238, 209, 0.8)";
@@ -4091,8 +4145,39 @@
     }
   }
 
+  function isWorldEdgeWall(wall) {
+    return (wall.x === 0 && wall.y === 0 && wall.w === WORLD_W) ||
+      (wall.x === 0 && wall.y === SURFACE_BOTTOM && wall.w === WORLD_W) ||
+      (wall.x === 0 && wall.w === 128) ||
+      (wall.x === WORLD_W - 128 && wall.w === 128);
+  }
+
+  function drawWorldEdgeWall(wall) {
+    ctx.save();
+    ctx.fillStyle = "#263332";
+    ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
+    const startX = Math.floor(wall.x / TILE) * TILE;
+    const startY = Math.floor(wall.y / TILE) * TILE;
+    const endX = wall.x + wall.w;
+    const endY = wall.y + wall.h;
+    for (let y = startY; y < endY; y += TILE) {
+      for (let x = startX; x < endX; x += TILE) {
+        if (!rectsOverlap({ x, y, w: TILE, h: TILE }, wall)) continue;
+        ctx.fillStyle = (tileHash(x, y) > 0.5) ? "#2f3d3b" : "#202b2a";
+        ctx.fillRect(x, y, TILE, TILE);
+        ctx.strokeStyle = "rgba(245, 238, 209, 0.08)";
+        ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
+      }
+    }
+    ctx.restore();
+  }
+
   function drawForestWalls() {
     for (const wall of TERRAIN_SOLIDS) {
+      if (isWorldEdgeWall(wall)) {
+        drawWorldEdgeWall(wall);
+        continue;
+      }
       const startX = Math.floor(wall.x / TILE) * TILE;
       const startY = Math.floor(wall.y / TILE) * TILE;
       const endX = wall.x + wall.w;
@@ -4684,13 +4769,13 @@
     ctx.lineWidth = 3;
     ctx.strokeRect(blocker.x + 5, blocker.y + 5, blocker.w - 10, blocker.h - 10);
     if (powered) {
-      ctx.strokeStyle = `rgba(105, 215, 255, ${0.45 + pulse * 0.35})`;
-      ctx.lineWidth = 2;
-      for (let y = blocker.y + 22; y < blocker.y + blocker.h; y += 42) {
-        ctx.beginPath();
-        ctx.moveTo(blocker.x + 18, y);
-        ctx.lineTo(blocker.x + blocker.w - 18, y + Math.sin(game.time * 9 + y) * 8);
-        ctx.stroke();
+      const blink = Math.floor(game.time * 8) % 2;
+      for (let y = blocker.y + 22; y < blocker.y + blocker.h - 22; y += 32) {
+        for (let x = blocker.x + 18; x < blocker.x + blocker.w - 18; x += 32) {
+          const on = (Math.floor(x / 32) + Math.floor(y / 32) + blink) % 2 === 0;
+          ctx.fillStyle = on ? "rgba(105, 215, 255, 0.72)" : "rgba(228, 84, 154, 0.42)";
+          ctx.fillRect(x, y, 12, 12);
+        }
       }
     }
     if (blocker.awake) {
@@ -5467,7 +5552,7 @@
     ctx.fillRect(faceX - 10, faceY - 18, 22, 20);
     ctx.fillStyle = "#1d1714";
     ctx.fillRect(faceX + (Math.cos(p.facing) >= 0 ? 4 : -5), faceY - 12, 4, 4);
-    ctx.fillStyle = palette.cream;
+    ctx.fillStyle = p.goldTeeth ? "#ffd66d" : palette.cream;
     ctx.fillRect(faceX + (Math.cos(p.facing) >= 0 ? 8 : -10), faceY - 5, 7, 6);
 
     if (p.hat) {
@@ -5505,7 +5590,7 @@
       const bx = Math.cos(p.facing) * 30;
       const by = Math.sin(p.facing) * 30;
       ctx.strokeRect(bx - 14, by - 12, 28, 24);
-      ctx.fillStyle = palette.cream;
+      ctx.fillStyle = p.goldTeeth ? "#ffd66d" : palette.cream;
       ctx.fillRect(bx - 7, by - 5, 5, 10);
       ctx.fillRect(bx + 2, by - 5, 5, 10);
     }
@@ -5536,18 +5621,17 @@
       drawHeart(88 + i * 22, 40, i + 1 <= Math.ceil(p.hp), p.hp - i);
     }
     ctx.fillStyle = palette.cream;
-    ctx.fillText(game.area === "underground" ? "PODZIEMIA" : "LAS", 34, 68);
-    ctx.fillText("SERWERY", 110, 68);
+    ctx.fillText("SERWERY", 34, 68);
     for (let i = 0; i < game.servers.length; i += 1) {
       const s = game.servers[i];
       ctx.fillStyle = s.destroyed ? palette.leafLight : palette.aiPink;
       ctx.beginPath();
-      ctx.roundRect(178 + i * 22, 61, 15, 15, 4);
+      ctx.roundRect(108 + i * 22, 61, 15, 15, 4);
       ctx.fill();
       ctx.fillStyle = "rgba(13, 18, 16, 0.85)";
       ctx.font = "800 9px Inter, system-ui, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(String(s.num), 178 + i * 22 + 7.5, 69);
+      ctx.fillText(String(s.num), 108 + i * 22 + 7.5, 69);
       ctx.textAlign = "left";
       ctx.font = "700 13px Inter, system-ui, sans-serif";
     }
@@ -5609,12 +5693,44 @@
       ctx.beginPath();
       ctx.arc(x, y, 12, 0, TAU);
       ctx.fill();
-    } else if (it.id === "letter1" || it.id === "letter2" || it.id === "journal1" || it.id === "logbook" || it.id === "manual" || it.id === "lastNote") {
+    } else if (it.id === "letter1") {
       ctx.fillStyle = "#d4a15b";
-      ctx.fillRect(x - 12, y - 9, 24, 18);
+      ctx.fillRect(x - 14, y - 8, 28, 18);
       ctx.fillStyle = "#f5eed1";
-      ctx.fillRect(x - 8, y - 5, 16, 3);
-      ctx.fillRect(x - 8, y + 1, 12, 3);
+      ctx.fillRect(x - 10, y - 4, 20, 3);
+      ctx.fillRect(x - 7, y + 2, 14, 3);
+    } else if (it.id === "letter2") {
+      ctx.fillStyle = "#c2b28c";
+      ctx.fillRect(x - 13, y - 10, 26, 20);
+      ctx.fillStyle = "#6aaec4";
+      ctx.fillRect(x - 9, y + 5, 18, 3);
+      ctx.fillRect(x - 5, y - 4, 10, 3);
+    } else if (it.id === "journal1") {
+      ctx.fillStyle = "#6d6f68";
+      ctx.fillRect(x - 13, y - 12, 26, 24);
+      ctx.fillStyle = "#dce4df";
+      ctx.fillRect(x - 8, y - 7, 16, 4);
+      ctx.fillRect(x - 4, y - 13, 8, 5);
+    } else if (it.id === "logbook") {
+      ctx.fillStyle = "#2f6f45";
+      ctx.fillRect(x - 14, y - 11, 28, 22);
+      ctx.fillStyle = "#d0a66e";
+      ctx.fillRect(x - 9, y - 5, 18, 3);
+      ctx.fillRect(x - 9, y + 2, 12, 3);
+    } else if (it.id === "manual") {
+      ctx.fillStyle = "#b6c6c9";
+      ctx.fillRect(x - 12, y - 13, 24, 26);
+      ctx.fillStyle = "#2f4b55";
+      ctx.fillRect(x - 7, y - 8, 14, 4);
+      ctx.fillRect(x - 7, y, 14, 3);
+      ctx.fillRect(x - 7, y + 6, 9, 3);
+    } else if (it.id === "lastNote") {
+      ctx.fillStyle = "#e0d5bf";
+      ctx.fillRect(x - 11, y - 12, 22, 24);
+      ctx.fillStyle = "rgba(92,57,36,0.45)";
+      ctx.fillRect(x - 6, y - 5, 12, 3);
+      ctx.fillRect(x - 8, y + 3, 16, 3);
+      ctx.fillRect(x + 6, y - 12, 5, 5);
     } else if (it.id === "hat") {
       ctx.fillStyle = "#34463d";
       ctx.fillRect(x - 14, y + 4, 28, 6);
@@ -5643,8 +5759,41 @@
       ctx.lineTo(x + 2, y + 8);
       ctx.closePath();
       ctx.fill();
+    } else if (it.id === "intel" && it.label && it.label.includes("BUTELKA")) {
+      ctx.fillStyle = "#6fa99f";
+      ctx.fillRect(x - 7, y - 15, 14, 27);
+      ctx.fillStyle = "#b8d6cf";
+      ctx.fillRect(x - 4, y - 21, 8, 7);
+      ctx.fillStyle = "#f1dfb8";
+      ctx.fillRect(x - 5, y - 2, 10, 9);
+    } else if (it.id === "intel" && it.label && it.label.includes("ZAB")) {
+      ctx.fillStyle = "#ffd66d";
+      ctx.fillRect(x - 9, y - 12, 18, 24);
+      ctx.fillStyle = "rgba(92,57,36,0.25)";
+      ctx.fillRect(x - 3, y - 5, 6, 12);
+    } else if (it.id === "intel" && it.label && it.label.includes("KOSC")) {
+      ctx.fillStyle = it.color || "#e8dcc4";
+      ctx.fillRect(x - 18, y - 5, 36, 10);
+      ctx.fillRect(x - 22, y - 9, 10, 18);
+      ctx.fillRect(x + 12, y - 9, 10, 18);
+    } else if (it.id === "intel" && it.label && it.label.includes("PIENIAZEK")) {
+      ctx.fillStyle = "#d6b25e";
+      ctx.beginPath();
+      ctx.arc(x, y, 12, 0, TAU);
+      ctx.fill();
+      ctx.fillStyle = "rgba(92,57,36,0.35)";
+      ctx.fillRect(x - 3, y - 8, 6, 16);
+    } else if (it.id === "intel" && it.label && it.label.includes("NOGA")) {
+      ctx.fillStyle = "#b77b43";
+      ctx.fillRect(x - 7, y - 17, 14, 34);
+      ctx.fillStyle = "#5c3924";
+      ctx.fillRect(x - 13, y + 10, 26, 8);
+    } else if (it.id === "intel" && it.label && it.label.includes("MASC")) {
+      ctx.fillStyle = "#2a3b26";
+      ctx.fillRect(x - 12, y - 14, 24, 28);
+      ctx.fillStyle = "#7ed957";
+      ctx.fillRect(x - 8, y - 8, 16, 16);
     } else {
-      // intel chip
       ctx.fillStyle = "#1c2a30";
       ctx.fillRect(x - 12, y - 9, 24, 18);
       ctx.fillStyle = "#9fe7ff";
@@ -5704,13 +5853,6 @@
         ctx.fillText(line, panelX + 78, dy);
         dy += 15;
       }
-      ctx.fillStyle = "rgba(126, 203, 119, 0.14)";
-      ctx.fillRect(panelX + panelW - 74, y + 14, 48, 24);
-      ctx.fillStyle = "rgba(245, 238, 209, 0.66)";
-      ctx.font = "900 11px Inter, system-ui, sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText("OK", panelX + panelW - 50, y + 30);
-      ctx.textAlign = "left";
       y += rowH;
       if (y > panelY + panelH - rowH) break;
     }
